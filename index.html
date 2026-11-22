@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="ur">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Restaurant Clone — Static Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        --bg:#FAF5EC; --surface:#FFFFFF; --surface2:#F4EBDC; --surface3:#EFE3CF;
+        --ink:#251A10; --muted:#7D6B58; --line:#E6D8C3;
+        --accent:#177245; --accent-ink:#FFFFFF; --accent-soft:#E2F1E7;
+        --amber:#D97706; --amber-soft:#FBEBD2;
+        --blue:#1D6FB8; --blue-soft:#E0EDF8;
+        --teal:#0F766E; --teal-soft:#DDF0ED;
+        --danger:#BE3A2B; --danger-soft:#F9E3DF;
+        --shadow:0 1px 2px rgba(60,40,10,.06),0 8px 24px -12px rgba(60,40,10,.18);
+        --radius:14px;
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#161009; --surface:#221910; --surface2:#2B2013; --surface3:#352818;
+          --ink:#F5EBDA; --muted:#B7A189; --line:#3D2E1D;
+          --accent:#35B273; --accent-ink:#0C1F14; --accent-soft:#173325;
+          --amber:#F0A63C; --amber-soft:#3A2A10;
+          --blue:#5FA8E0; --blue-soft:#16293C;
+          --teal:#3EC2B4; --teal-soft:#123330;
+          --danger:#F08A7A; --danger-soft:#3C1D16;
+          --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -12px rgba(0,0,0,.6);
+        }
+      }
+      *{box-sizing:border-box}
+      html{-webkit-text-size-adjust:100%}
+      body{margin:0;background:var(--bg);color:var(--ink);font-family:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.45;padding-bottom:92px}
+      @media (min-width:900px){body{padding-bottom:40px}}
+      button,[role="button"],select,input,textarea{font:inherit;color:inherit}
+      button{cursor:pointer}
+      button,select,input:not([type="checkbox"]),textarea{ min-height:40px }
+      .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+      /* ---------- Header ---------- */
+      header.top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 88%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+      .top-in{max-width:1180px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
+      .brand{min-width:0}
+      .brand h1{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .brand p{margin:0;font-size:12px;color:var(--muted);font-weight:600}
+      .live-pill{margin-left:auto;display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:700;white-space:nowrap;box-shadow:var(--shadow)}
+      .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.6s infinite}
+      @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+      @media (prefers-reduced-motion: reduce){.dot{animation:none}}
+
+      /* ---------- Nav ---------- */
+      nav.main{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+      nav.main button{flex:1;background:none;border:0;border-radius:12px;padding:7px 2px 5px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--muted);position:relative;min-height:52px}
+      nav.main button svg{width:21px;height:21px}
+      nav.main button.active{color:var(--accent);background:var(--accent-soft)}
+      .badge{position:absolute;top:3px;right:calc(50% - 21px);background:var(--danger);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+      @media (min-width:900px){
+        nav.main{position:sticky;top:65px;bottom:auto;border-top:0;border-bottom:1px solid var(--line);background:var(--bg);padding:8px 16px;gap:8px;max-width:1180px;margin:0 auto;justify-content:flex-start}
+        nav.main button{flex:0 0 auto;flex-direction:row;gap:8px;padding:9px 16px;font-size:13.5px;border:1px solid var(--line);background:var(--surface);min-height:42px}
+        nav.main button.active{border-color:var(--accent)}
+        .badge{position:static;margin-left:2px}
+      }
+
+      main{max-width:1180px;margin:0 auto;padding:18px 16px 8px}
+      .view{display:none}
+      .view.active{display:block}
+      h2.sec{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:4px 0 4px}
+      p.sub{color:var(--muted);margin:0 0 16px;font-size:13.5px;font-weight:500}
+      h3.blk{font-size:15px;font-weight:800;margin:22px 0 10px}
+
+      /* ---------- Stat cards ---------- */
+      .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+      @media (min-width:760px){.stats{grid-template-columns:repeat(4,1fr)}}
+      .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 15px;box-shadow:var(--shadow)}
+      .stat .k{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+      .stat .v{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:3px}
+      .stat .v small{font-size:13px;color:var(--muted);font-weight:700}
+      .stat.hero{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+      .stat.hero .k{color:color-mix(in srgb,var(--accent-ink) 75%, transparent)}
+      .stat.hero .v small{color:color-mix(in srgb,var(--accent-ink) 75%, transparent)}
+
+      /* ---------- Table grid ---------- */
+      .tgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+      @media (min-width:640px){.tgrid{grid-template-columns:repeat(3,1fr)}}
+      @media (min-width:980px){.tgrid{grid-template-columns:repeat(4,1fr)}}
+      .tcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;text-align:left;box-shadow:var(--shadow);display:block;width:100%}
+      .tcard .tname{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+      .tcard .tseats{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px}
+      .tcard .tamt{font-size:15px;font-weight:800;margin-top:8px}
+      .tcard .tamt span{color:var(--muted);font-size:12px;font-weight:600}
+      .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
+      .pill.free{background:var(--surface2);color:var(--muted)}
+      .pill.new{background:var(--amber-soft);color:var(--amber)}
+      .pill.preparing{background:var(--blue-soft);color:var(--blue)}
+      .pill.ready{background:var(--accent-soft);color:var(--accent)}
+      .pill.served{background:var(--teal-soft);color:var(--teal)}
+      .pill.vip{background:#3B2A10;color:#F5C86B}
+      @media (prefers-color-scheme: dark){.pill.vip{background:#4A3512;color:#FFD98A}}
+
+      /* ---------- Menu / order ---------- */
+      .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+      .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 15px;font-weight:700;font-size:13px;min-height:38px}
+      .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+      .chip.tbl.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+      .mgrid{display:grid;grid-template-columns:1fr;gap:10px}
+      @media (min-width:640px){.mgrid{grid-template-columns:repeat(2,1fr)}}
+      @media (min-width:980px){.mgrid{grid-template-columns:repeat(3,1fr)}}
+      .mitem{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
+      .mitem .mi-body{flex:1;min-width:0}
+      .mitem .mi-name{font-weight:800;font-size:15px}
+      .mitem .mi-cat{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+      .mitem .mi-price{font-weight:800;color:var(--accent);margin-top:2px}
+      .stepper{display:flex;align-items:center;gap:2px;background:var(--surface2);border-radius:999px;padding:3px}
+      .stepper button{width:36px;height:36px;min-height:36px;border-radius:50%;border:0;background:var(--surface);font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+      .stepper .q{min-width:26px;text-align:center;font-weight:800}
+      .field{margin-bottom:12px}
+      .field label{display:block;font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+      select.inp,input.inp,textarea.inp{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-weight:600}
+      textarea.inp{min-height:64px;resize:vertical}
+      .cartbar{position:sticky;bottom:86px;z-index:20;background:var(--ink);color:var(--bg);border-radius:16px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 14px 34px -10px rgba(0,0,0,.45);margin-top:14px}
+      @media (min-width:900px){.cartbar{bottom:16px}}
+      .cartbar .ct{flex:1}
+      .cartbar .ct b{font-size:16px}
+      .cartbar .ct div{font-size:12px;opacity:.75;font-weight:600}
+      .btn{border:0;border-radius:12px;padding:11px 18px;font-weight:800;font-size:14px;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;gap:8px;justify-content:center}
+      .btn:active{transform:scale(.98)}
+      .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+      .btn.amber{background:var(--amber);color:#fff}
+      .btn.blue{background:var(--blue);color:#fff}
+      .btn.danger{background:var(--danger);color:#fff}
+      .btn.sm{padding:8px 13px;font-size:13px;min-height:38px}
+      .btn.block{width:100%}
+      .btn[disabled]{opacity:.45;pointer-events:none}
+
+      /* ---------- Kitchen / order cards ---------- */
+      .ocard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow);margin-bottom:11px}
+      .ocard .o-head{display:flex;align-items:flex-start;gap:10px}
+      .ocard .o-code{font-weight:800;font-size:16px}
+      .ocard .o-meta{font-size:12.5px;color:var(--muted);font-weight:600}
+      .timer{margin-left:auto;text-align:right}
+      .timer .t{font-size:19px;font-weight:800}
+      .timer .l{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+      .timer.hot .t{color:var(--danger)}
+      .o-items{margin:11px 0 0;padding:0;list-style:none}
+      .o-items li{display:flex;gap:8px;padding:5px 0;border-top:1px dashed var(--line);font-size:14px}
+      .o-items li:first-child{border-top:0}
+      .o-items .qty{font-weight:800;background:var(--surface2);border-radius:7px;min-width:30px;text-align:center;padding:1px 4px;height:fit-content}
+      .o-items .amt{margin-left:auto;font-weight:700;white-space:nowrap}
+      .o-foot{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;align-items:center}
+      .o-total{margin-left:auto;font-weight:800;font-size:16px}
+      .empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius);padding:26px 18px;text-align:center;color:var(--muted);font-weight:600}
+      .empty b{color:var(--ink);display:block;font-size:16px;margin-bottom:4px}
+
+      /* ---------- Waiter ---------- */
+      .wgrid{display:grid;grid-template-columns:1fr;gap:10px}
+      @media (min-width:760px){.wgrid{grid-template-columns:repeat(3,1fr)}}
+      .wcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow)}
+      .wcard .w-name{font-size:16.5px;font-weight:800;display:flex;align-items:center;gap:9px}
+      .avatar{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none}
+      .wstats{display:flex;gap:14px;margin-top:11px}
+      .wstats div b{display:block;font-size:17px}
+      .wstats div span{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+      .switch{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;cursor:pointer;padding:8px 4px}
+      .switch input{width:20px;height:20px;accent-color:var(--accent)}
+      select.mini{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;font-weight:700;font-size:13.5px;max-width:190px}
+
+      /* ---------- Guest zone / QR ---------- */
+      .qrgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+      @media (min-width:640px){.qrgrid{grid-template-columns:repeat(3,1fr)}}
+      @media (min-width:980px){.qrgrid{grid-template-columns:repeat(4,1fr)}}
+      .qrcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;text-align:center;box-shadow:var(--shadow)}
+      .qrcard canvas{width:112px;height:112px;image-rendering:pixelated;border-radius:8px}
+      .qrcard .qname{font-weight:800;margin-top:8px}
+      .qrcard .qhint{font-size:12px;color:var(--muted);font-weight:600;margin:2px 0 10px}
+      .bill-line{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
+      .bill-line.total{border-top:2px solid var(--ink);margin-top:7px;padding-top:9px;font-weight:800;font-size:16.5px}
+      .bill-line.tax{color:var(--muted);font-weight:600}
+
+      /* ---------- Reviews ---------- */
+      .rev{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow);margin-bottom:9px}
+      .stars{color:var(--amber);font-size:15px;letter-spacing:2px}
+      .stars .off{color:var(--line)}
+      .rev .r-meta{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
+      .rev p{margin:5px 0 0;font-size:14px}
+
+      /* ---------- Sheet / modal ---------- */
+      .overlay{position:fixed;inset:0;background:rgba(20,12,4,.55);z-index:60;display:none;align-items:flex-end;justify-content:center}
+      .overlay.open{display:flex}
+      .sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom))}
+      @media (min-width:700px){.overlay{align-items:center;padding:20px}.sheet{border-radius:22px}}
+      .sheet h3{margin:0 0 4px;font-size:19px;font-weight:800}
+      .sheet .s-sub{color:var(--muted);font-size:13px;font-weight:600;margin:0 0 14px}
+      .seg{display:flex;background:var(--surface2);border-radius:12px;padding:4px;gap:4px}
+      .seg button{flex:1;border:0;background:none;border-radius:9px;padding:10px 4px;font-weight:800;font-size:13.5px;color:var(--muted);min-height:42px}
+      .seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+      .splitrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+      .receipt{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:6px}
+      .receipt .r-head{text-align:center;border-bottom:1px dashed var(--line);padding-bottom:10px;margin-bottom:10px}
+      .receipt .r-head b{font-size:17px}
+      .bigstars{display:flex;gap:6px;justify-content:center;margin:10px 0}
+      .bigstars button{background:none;border:0;font-size:34px;line-height:1;color:var(--line);padding:6px;min-height:48px;min-width:48px}
+      .bigstars button.on{color:var(--amber)}
+
+      /* ---------- Toast ---------- */
+      #toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:104px;z-index:80;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:.25s;max-width:92vw;text-align:center;box-shadow:0 16px 40px -10px rgba(0,0,0,.5)}
+      #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+      #toast.err{background:var(--danger);color:#fff}
+      @media (min-width:900px){#toast{bottom:28px}}
+
+      /* ---------- Guest mode ---------- */
+      #guestView{display:none}
+      body.guest header.top,body.guest nav.main{display:none}
+      body.guest{padding-bottom:110px}
+      body.guest #guestView{display:block}
+      body.guest #staffApp{display:none}
+      .g-head{background:var(--accent);color:var(--accent-ink);padding:22px 18px 18px;border-radius:0 0 22px 22px}
+      .g-head h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+      .g-head p{margin:3px 0 0;font-size:13px;font-weight:600;opacity:.85}
+      .g-wrap{max-width:760px;margin:0 auto;padding:16px}
+      .steps{display:flex;gap:0;margin:14px 0}
+      .steps div{flex:1;text-align:center;font-size:11.5px;font-weight:800;color:var(--muted);padding-top:16px;position:relative}
+      .steps div::before{content:"";position:absolute;top:5px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:var(--line)}
+      .steps div::after{content:"";position:absolute;top:10px;left:calc(-50% + 8px);right:calc(50% + 8px);height:2px;background:var(--line)}
+      .steps div:first-child::after{display:none}
+      .steps div.done{color:var(--accent)}
+      .steps div.done::before{background:var(--accent)}
+      .steps div.done::after{background:var(--accent)}
+      .rowflex{display:flex;gap:10px;flex-wrap:wrap}
+      .note{font-size:12.5px;color:var(--muted);font-weight:600}
+      .divider{height:1px;background:var(--line);margin:18px 0}
+    </style>
+  </head>
+  <body>
+    <div id="staffApp">
+      <header class="top">
+        <div class="top-in">
+          <div class="brand">
+            <h1 id="bizName">Shizcon Restaurant</h1>
+            <p>Restaurant Management System — Demo</p>
+          </div>
+          <div class="live-pill"><span class="dot"></span><span id="clock" class="num">--:--</span>&nbsp;· LIVE</div>
+        </div>
+      </header>
+
+      <nav class="main" id="mainNav" aria-label="Main"></nav>
+
+      <main>
+        <section class="view" id="view-home"></section>
+        <section class="view" id="view-order"></section>
+        <section class="view" id="view-kitchen"></section>
+        <section class="view" id="view-waiter"></section>
+        <section class="view" id="view-guest"></section>
+        <section class="view" id="view-manage"></section>
+      </main>
+    </div>
+
+    <div id="guestView"></div>
+
+    <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+    <div id="toast" role="status"></div>
+
+    <script>
+      /* ================= DATA (demo — session memory) ================= */
+      var MENU = [
+        {id:'m1',  name:'Chicken Biryani',  price:400, cat:'Mains'},
+        {id:'m2',  name:'Beef Karahi (Half)', price:950, cat:'Mains'},
+        {id:'m3',  name:'Daal Mash',        price:350, cat:'Mains'},
+        {id:'m4',  name:'Chicken Tikka',    price:550, cat:'BBQ'},
+        {id:'m5',  name:'Malai Boti',       price:650, cat:'BBQ'},
+        {id:'m6',  name:'Seekh Kabab (4 pc)', price:600, cat:'BBQ'},
+        {id:'m7',  name:'Zinger Burger',    price:450, cat:'Fast Food'},
+        {id:'m8',  name:'Loaded Fries',     price:300, cat:'Fast Food'},
+        {id:'m9',  name:'Garlic Naan',      price:80,  cat:'Breads'},
+        {id:'m10', name:'Roghni Naan',      price:120, cat:'Breads'},
+        {id:'m11', name:'Mint Margarita',   price:200, cat:'Drinks'},
+        {id:'m12', name:'Kulfi Falooda',    price:350, cat:'Dessert'}
+      ];
+      var TABLES = [
+        {id:'T1', seats:2}, {id:'T2', seats:2}, {id:'T3', seats:4},
+        {id:'T4', seats:4}, {id:'T5', seats:6}, {id:'T6', seats:6},
+        {id:'VIP', seats:8, vip:true, name:'VIP Lounge'}
+      ];
+      var state = {
+        settings:{ name:'Shizcon Restaurant', tax:5 },
+        waiters:[
+          {id:'w1', name:'Ahmed', onDuty:true},
+          {id:'w2', name:'Bilal', onDuty:true},
+          {id:'w3', name:'Usman', onDuty:false}
+        ],
+        orders:[], reviews:[], seq:104
+      };
+      var now = Date.now();
+      function seedOrder(code, tableId, waiterId, items, status, minsAgo, extra){
+        var o = { code:code, tableId:tableId, waiterId:waiterId, items:items, status:status,
+                  placedAt: now - minsAgo*60000, servedAt:null, payment:null, guest:false };
+        if(extra){ for(var k in extra) o[k]=extra[k]; }
+        state.orders.push(o); return o;
+      }
+      seedOrder(101,'T2','w1',[{id:'m1',name:'Chicken Biryani',price:400,qty:2},{id:'m11',name:'Mint Margarita',price:200,qty:1}],'paid',52,
+        { servedAt: now-40*60000, payment:{method:'Cash', splits:[{label:'Poora bill', amount:1050}]} });
+      seedOrder(102,'T3','w2',[{id:'m2',name:'Beef Karahi (Half)',price:950,qty:1},{id:'m9',name:'Garlic Naan',price:80,qty:4}],'preparing',7);
+      seedOrder(103,'T5','w1',[{id:'m4',name:'Chicken Tikka',price:550,qty:2},{id:'m12',name:'Kulfi Falooda',price:350,qty:2}],'ready',14);
+      state.reviews.push({stars:5, text:'Biryani boht mazay ki thi, service bhi tez thi!', table:'T2', when: now-38*60000});
+    </script>
+    <script>
+      /* ================= HELPERS ================= */
+      function $(s, r){ return (r||document).querySelector(s); }
+      function $$(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+      function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+      function rs(n){ return 'PKR ' + Math.round(n).toLocaleString('en-PK'); }
+      function tableName(t){ return t.vip ? 'VIP Lounge' : ('Table ' + t.id); }
+      function getTable(id){ for(var i=0;i<TABLES.length;i++) if(TABLES[i].id===id) return TABLES[i]; return null; }
+      function getWaiter(id){ for(var i=0;i<state.waiters.length;i++) if(state.waiters[i].id===id) return state.waiters[i]; return null; }
+      function orderSubtotal(o){ return o.items.reduce(function(s,it){ return s + it.price*it.qty; },0); }
+      function orderTax(o){ return Math.round(orderSubtotal(o) * state.settings.tax/100); }
+      function orderTotal(o){ return orderSubtotal(o) + orderTax(o); }
+      function activeOrderFor(tableId){ for(var i=0;i<state.orders.length;i++){ var o=state.orders[i]; if(o.tableId===tableId && o.status!=='paid') return o; } return null; }
+      function activeOrders(){ return state.orders.filter(function(o){ return o.status!=='paid'; }); }
+      function paidOrders(){ return state.orders.filter(function(o){ return o.status==='paid'; }); }
+      function todayEarnings(){ return paidOrders().reduce(function(s,o){ return s + orderTotal(o); },0); }
+      function elapsedMs(o){ return Date.now() - o.placedAt; }
+      function fmtElapsed(ms){ var s=Math.max(0,Math.floor(ms/1000)); var m=Math.floor(s/60); var ss=s%60; return m + ':' + (ss<10?'0':'') + ss; }
+      function starsHtml(n){ var h='<span class="stars">'; for(var i=1;i<=5;i++) h += '<span class="'+(i<=n?'':'off')+'">★</span>'; return h+'</span>'; }
+      var toastTimer=null;
+      function toast(msg, isErr){ var t=$('#toast'); t.textContent=msg; t.className='show'+(isErr?' err':''); clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.className=''; },2600); }
+
+      /* ================= NAV ================= */
+      var TABS = [
+        {id:'home',    label:'Home',    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>'},
+        {id:'order',   label:'Order',   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>'},
+        {id:'kitchen', label:'Kitchen', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.5A4.5 4.5 0 0 1 15 9c2.8 0 4.5 1.6 5.5 3.5"/><path d="M4 17.5h16M12 9V6.5M9 6.5h6"/></svg>'},
+        {id:'waiter',  label:'Waiter',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5"/></svg>'},
+        {id:'guest',   label:'Guest Zone', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>'},
+        {id:'manage',  label:'Manage',  icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2Z"/></svg>'}
+      ];
+      var currentTab = 'home';
+      function badgeFor(id){
+        if(id==='kitchen') return state.orders.filter(function(o){ return o.status==='new'||o.status==='preparing'; }).length;
+        if(id==='waiter') return state.orders.filter(function(o){ return o.status==='ready'; }).length;
+        return 0;
+      }
+      function renderNav(){
+        $('#mainNav').innerHTML = TABS.map(function(t){
+          var b = badgeFor(t.id);
+          return '<button data-tab="'+t.id+'" class="'+(currentTab===t.id?'active':'')+'">'+t.icon+'<span>'+t.label+'</span>'+(b?'<span class="badge num">'+b+'</span>':'')+'</button>';
+        }).join('');
+        $$('#mainNav button').forEach(function(btn){ btn.addEventListener('click', function(){ goTab(btn.getAttribute('data-tab')); }); });
+      }
+      function goTab(id){ currentTab=id; $$('.view').forEach(function(v){ v.classList.remove('active'); }); $('#view-'+id).classList.add('active'); renderNav(); render(); window.scrollTo({top:0}); }
+
+      /* ================= HOME ================= */
+      function statusPill(o){
+        if(!o) return '<span class="pill free">Free</span>';
+        var map={new:['new','Kitchen mein gaya'], preparing:['preparing','Bann raha hai'], ready:['ready','Ready — serve karein'], served:['served','Serve ho gaya']};
+        var m=map[o.status]; return '<span class="pill '+m[0]+'">'+m[1]+'</span>';
+      }
+      function renderHome(){
+        var act = activeOrders();
+        var avg = state.reviews.length ? (state.reviews.reduce(function(s,r){return s+r.stars;},0)/state.reviews.length) : 0;
+        var html = '<h2 class="sec">Aaj ka overview</h2><p class="sub">Live table grid — table par tap karein: free ho to order, busy ho to bill.</p>';
+        html += '<div class="stats">'
+          + '<div class="stat hero"><div class="k">Aaj ki kamai</div><div class="v num">'+rs(todayEarnings())+'</div></div>'
+          + '<div class="stat"><div class="k">Active orders</div><div class="v num">'+act.length+'</div></div>'
+          + '<div class="stat"><div class="k">Busy tables</div><div class="v num">'+act.length+' <small>/ '+TABLES.length+'</small></div></div>'
+          + '<div class="stat"><div class="k">Reviews</div><div class="v num">'+(state.reviews.length? avg.toFixed(1):'—')+' <small>'+(state.reviews.length? '('+state.reviews.length+' reviews)':'abhi koi nahi')+'</small></div></div>'
+          + '</div>';
+        html += '<h3 class="blk">Tables — live</h3><div class="tgrid">';
+        TABLES.forEach(function(t){
+          var o = activeOrderFor(t.id);
+          html += '<button class="tcard" data-table="'+t.id+'">'
+            + '<span class="tname">'+esc(tableName(t))+(t.vip?' <span class="pill vip">VIP</span>':'')+'</span>'
+            + '<span class="tseats">'+t.seats+' seats</span>'
+            + '<div style="margin-top:9px">'+statusPill(o)+'</div>'
+            + (o ? '<div class="tamt num">'+rs(orderTotal(o))+' <span>· order #'+o.code+' · <span data-elapsed="'+o.code+'">'+fmtElapsed(elapsedMs(o))+'</span></span></div>' : '<div class="tamt" style="color:var(--muted);font-size:13px">Tap kar ke order lagayein</div>')
+            + '</button>';
+        });
+        html += '</div>';
+        if(state.reviews.length){
+          html += '<h3 class="blk">Recent reviews</h3>';
+          state.reviews.slice(-3).reverse().forEach(function(r){
+            html += '<div class="rev">'+starsHtml(r.stars)+'<div class="r-meta">'+esc(r.table)+' · '+new Date(r.when).toLocaleTimeString('en-PK',{hour:'numeric',minute:'2-digit'})+'</div>'+(r.text?'<p>'+esc(r.text)+'</p>':'')+'</div>';
+          });
+        }
+        $('#view-home').innerHTML = html;
+        $$('#view-home [data-table]').forEach(function(b){ b.addEventListener('click', function(){
+          var tid=b.getAttribute('data-table');
+          if(activeOrderFor(tid)){ goTab('guest'); setTimeout(function(){ var el=document.getElementById('bill-'+tid); if(el) el.scrollIntoView({behavior:'smooth', block:'center'}); },60); }
+          else { orderState.tableId=tid; goTab('order'); }
+        }); });
+      }
+
+      /* ================= ORDER (staff) ================= */
+      var orderState = { tableId:'T1', cat:'Sab', cart:{} };
+      function cartCount(cart){ var n=0; for(var k in cart) n+=cart[k]; return n; }
+      function cartTotal(cart){ var s=0; for(var k in cart){ var m=null; MENU.forEach(function(x){ if(x.id===k) m=x; }); if(m) s+=m.price*cart[k]; } return s; }
+      function cats(){ var c=['Sab']; MENU.forEach(function(m){ if(c.indexOf(m.cat)<0) c.push(m.cat); }); return c; }
+      function menuGridHtml(cart, prefix){
+        return '<div class="mgrid">' + MENU.filter(function(m){ return orderState.cat==='Sab' || m.cat===orderState.cat; }).map(function(m){
+          var q = cart[m.id]||0;
+          return '<div class="mitem"><div class="mi-body"><div class="mi-cat">'+esc(m.cat)+'</div><div class="mi-name">'+esc(m.name)+'</div><div class="mi-price num">'+rs(m.price)+'</div></div>'
+            + '<div class="stepper"><button data-'+prefix+'-dec="'+m.id+'" aria-label="Kam karein">−</button><span class="q num" id="'+prefix+'-q-'+m.id+'">'+q+'</span><button data-'+prefix+'-inc="'+m.id+'" aria-label="Barhayein">+</button></div></div>';
+        }).join('') + '</div>';
+      }
+      function bindSteppers(root, cart, prefix, onChange){
+        $$('[data-'+prefix+'-inc]', root).forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-'+prefix+'-inc'); cart[id]=(cart[id]||0)+1; var el=document.getElementById(prefix+'-q-'+id); if(el) el.textContent=cart[id]; onChange(); }); });
+        $$('[data-'+prefix+'-dec]', root).forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-'+prefix+'-dec'); cart[id]=Math.max(0,(cart[id]||0)-1); if(!cart[id]) delete cart[id]; var el=document.getElementById(prefix+'-q-'+id); if(el) el.textContent=cart[id]||0; onChange(); }); });
+      }
+      function renderOrder(){
+        var html = '<h2 class="sec">Naya order</h2><p class="sub">Table aur waiter choose karein, items add karein — order seedha kitchen mein jayega.</p>';
+        html += '<div class="field"><label>Table</label><div class="chips">' + TABLES.map(function(t){
+          var busy = !!activeOrderFor(t.id);
+          return '<button class="chip tbl'+(orderState.tableId===t.id?' on':'')+'" data-tbl="'+t.id+'" '+(busy?'disabled style="opacity:.45"':'')+'>'+esc(tableName(t))+(busy?' · busy':'')+'</button>';
+        }).join('') + '</div></div>';
+        var onDuty = state.waiters.filter(function(w){ return w.onDuty; });
+        html += '<div class="field"><label>Waiter (sirf on-duty)</label><select class="inp" id="ordWaiter"><option value="">— Koi nahi —</option>'
+          + onDuty.map(function(w){ return '<option value="'+w.id+'">'+esc(w.name)+'</option>'; }).join('') + '</select></div>';
+        html += '<div class="chips">' + cats().map(function(c){ return '<button class="chip'+(orderState.cat===c?' on':'')+'" data-cat="'+c+'">'+esc(c)+'</button>'; }).join('') + '</div>';
+        html += '<div id="ordMenu">'+menuGridHtml(orderState.cart,'ord')+'</div>';
+        html += '<div class="cartbar"><div class="ct"><b class="num" id="ordCartTotal">'+rs(cartTotal(orderState.cart))+'</b><div><span id="ordCartCount">'+cartCount(orderState.cart)+'</span> items · tax bill par lagega</div></div><button class="btn" id="placeOrder">Order lagayein →</button></div>';
+        $('#view-order').innerHTML = html;
+        $$('#view-order [data-tbl]').forEach(function(b){ b.addEventListener('click', function(){ orderState.tableId=b.getAttribute('data-tbl'); renderOrder(); }); });
+        $$('#view-order [data-cat]').forEach(function(b){ b.addEventListener('click', function(){ orderState.cat=b.getAttribute('data-cat'); renderOrder(); }); });
+        bindSteppers($('#view-order'), orderState.cart, 'ord', function(){
+          $('#ordCartTotal').textContent = rs(cartTotal(orderState.cart));
+          $('#ordCartCount').textContent = cartCount(orderState.cart);
+        });
+        $('#placeOrder').addEventListener('click', function(){
+          if(!cartCount(orderState.cart)){ toast('Pehle kuch items add karein', true); return; }
+          if(activeOrderFor(orderState.tableId)){ toast('Is table par pehle se order active hai', true); return; }
+          var items=[]; for(var k in orderState.cart){ MENU.forEach(function(m){ if(m.id===k) items.push({id:m.id, name:m.name, price:m.price, qty:orderState.cart[k]}); }); }
+          var wid = $('#ordWaiter').value || null;
+          state.orders.push({ code: state.seq++, tableId: orderState.tableId, waiterId: wid, items: items, status:'new', placedAt: Date.now(), servedAt:null, payment:null, guest:false });
+          orderState.cart = {};
+          toast('Order kitchen mein bhej diya gaya');
+          goTab('kitchen');
+        });
+      }
+
+      /* ================= KITCHEN ================= */
+      function orderItemsHtml(o){
+        return '<ul class="o-items">' + o.items.map(function(it){
+          return '<li><span class="qty num">×'+it.qty+'</span><span>'+esc(it.name)+'</span><span class="amt num">'+rs(it.price*it.qty)+'</span></li>';
+        }).join('') + '</ul>';
+      }
+      function renderKitchen(){
+        var queue = state.orders.filter(function(o){ return o.status==='new'||o.status==='preparing'; })
+          .sort(function(a,b){ return a.placedAt-b.placedAt; });
+        var html = '<h2 class="sec">Kitchen Display</h2><p class="sub">LIVE queue — sab se purana order sab se upar. Timer har order ka wait time dikhata hai.</p>';
+        if(!queue.length) html += '<div class="empty"><b>Queue khaali hai</b>Abhi koi order kitchen mein nahi.</div>';
+        queue.forEach(function(o){
+          var t = getTable(o.tableId); var hot = elapsedMs(o) > 10*60000;
+          html += '<div class="ocard"><div class="o-head"><div><div class="o-code">Order #'+o.code+' · '+esc(tableName(t))+'</div>'
+            + '<div class="o-meta">'+(o.guest?'Guest ne QR menu se order kiya':'Staff order')+(o.waiterId && getWaiter(o.waiterId) ? ' · Waiter: '+esc(getWaiter(o.waiterId).name) : '')+'</div></div>'
+            + '<div class="timer'+(hot?' hot':'')+'"><div class="t num" data-elapsed="'+o.code+'">'+fmtElapsed(elapsedMs(o))+'</div><div class="l">wait time</div></div></div>'
+            + orderItemsHtml(o)
+            + '<div class="o-foot">' + (o.status==='new'
+                ? '<button class="btn blue" data-start="'+o.code+'">▶ Start banayein</button>'
+                : '<span class="pill preparing">Bann raha hai…</span><button class="btn" data-ready="'+o.code+'">✓ Ready karein</button>')
+            + '<span class="o-total num">'+rs(orderTotal(o))+'</span></div></div>';
+        });
+        $('#view-kitchen').innerHTML = html;
+        $$('#view-kitchen [data-start]').forEach(function(b){ b.addEventListener('click', function(){ setStatus(+b.getAttribute('data-start'),'preparing'); toast('Order #'+b.getAttribute('data-start')+' bann raha hai'); }); });
+        $$('#view-kitchen [data-ready]').forEach(function(b){ b.addEventListener('click', function(){ setStatus(+b.getAttribute('data-ready'),'ready'); toast('Order #'+b.getAttribute('data-ready')+' ready hai — waiter ko bulayein'); }); });
+      }
+      function setStatus(code, status){ state.orders.forEach(function(o){ if(o.code===code) o.status=status; }); render(); }
+
+      /* ================= WAITER ================= */
+      function waiterStats(w){
+        var mine = state.orders.filter(function(o){ return o.waiterId===w.id; });
+        return {
+          active: mine.filter(function(o){ return o.status!=='paid'; }).length,
+          served: mine.filter(function(o){ return o.servedAt; }).length,
+          earned: mine.filter(function(o){ return o.status==='paid'; }).reduce(function(s,o){ return s+orderTotal(o); },0)
+        };
+      }
+      function renderWaiter(){
+        var ready = state.orders.filter(function(o){ return o.status==='ready'; }).sort(function(a,b){ return a.placedAt-b.placedAt; });
+        var act = activeOrders().sort(function(a,b){ return a.placedAt-b.placedAt; });
+        var html = '<h2 class="sec">Waiter</h2><p class="sub">Ready orders serve karein, har order ka waiter assign ya change karein.</p>';
+
+        html += '<h3 class="blk">Ready — serve karein ('+ready.length+')</h3>';
+        if(!ready.length) html += '<div class="empty"><b>Kuch ready nahi</b>Kitchen se order ready hoga to yahan aayega.</div>';
+        ready.forEach(function(o){
+          html += '<div class="ocard"><div class="o-head"><div><div class="o-code">Order #'+o.code+' · '+esc(tableName(getTable(o.tableId)))+'</div>'
+            + '<div class="o-meta">'+o.items.reduce(function(s,i){return s+i.qty;},0)+' items · Waiter: '+(o.waiterId && getWaiter(o.waiterId) ? esc(getWaiter(o.waiterId).name) : 'assign nahi')+' · <span data-elapsed="'+o.code+'">'+fmtElapsed(elapsedMs(o))+'</span></div></div>'
+            + '<span class="pill ready">READY</span></div>'
+            + '<div class="o-foot"><button class="btn" data-serve="'+o.code+'">Serve karein</button><span class="o-total num">'+rs(orderTotal(o))+'</span></div></div>';
+        });
+
+        html += '<h3 class="blk">Service board — waiter assign</h3>';
+        if(!act.length) html += '<div class="empty"><b>Koi active order nahi</b></div>';
+        act.forEach(function(o){
+          html += '<div class="ocard"><div class="o-head"><div><div class="o-code">Order #'+o.code+' · '+esc(tableName(getTable(o.tableId)))+'</div>'
+            + '<div class="o-meta">'+statusText(o.status)+'</div></div><span class="o-total num" style="margin-left:auto">'+rs(orderTotal(o))+'</span></div>'
+            + '<div class="o-foot"><span class="note">Waiter:</span><select class="mini" data-assign="'+o.code+'">'
+            + '<option value="">— Assign nahi —</option>'
+            + state.waiters.map(function(w){ return '<option value="'+w.id+'"'+(o.waiterId===w.id?' selected':'')+'>'+esc(w.name)+(w.onDuty?'':' (off-duty)')+'</option>'; }).join('')
+            + '</select></div></div>';
+        });
+
+        html += '<h3 class="blk">Waiters — aaj ki performance</h3><div class="wgrid">';
+        state.waiters.forEach(function(w){
+          var s = waiterStats(w);
+          html += '<div class="wcard"><div class="w-name"><span class="avatar">'+esc(w.name.charAt(0).toUpperCase())+'</span>'+esc(w.name)
+            + '<label class="switch"><input type="checkbox" data-duty="'+w.id+'"'+(w.onDuty?' checked':'')+'> '+(w.onDuty?'On duty':'Off duty')+'</label></div>'
+            + '<div class="wstats"><div><b class="num">'+s.active+'</b><span>Active</span></div><div><b class="num">'+s.served+'</b><span>Serve kiye</span></div><div><b class="num">'+rs(s.earned)+'</b><span>Kamai</span></div></div></div>';
+        });
+        html += '</div>';
+        $('#view-waiter').innerHTML = html;
+        $$('#view-waiter [data-serve]').forEach(function(b){ b.addEventListener('click', function(){
+          var code=+b.getAttribute('data-serve');
+          state.orders.forEach(function(o){ if(o.code===code){ o.status='served'; o.servedAt=Date.now(); } });
+          toast('Order #'+code+' serve ho gaya'); render();
+        }); });
+        $$('#view-waiter [data-assign]').forEach(function(sel){ sel.addEventListener('change', function(){
+          var code=+sel.getAttribute('data-assign'); var wid=sel.value;
+          if(wid){ var w=getWaiter(wid); if(w && !w.onDuty){ toast(w.name+' off-duty hai — order assign nahi ho sakta', true); render(); return; } }
+          state.orders.forEach(function(o){ if(o.code===code) o.waiterId = wid||null; });
+          toast(wid ? 'Waiter assign ho gaya' : 'Waiter hata diya gaya'); render();
+        }); });
+        $$('#view-waiter [data-duty]').forEach(function(cb){ cb.addEventListener('change', function(){
+          var w=getWaiter(cb.getAttribute('data-duty')); if(w){ w.onDuty=cb.checked; toast(w.name+(cb.checked?' on-duty ho gaya':' off-duty ho gaya')); render(); }
+        }); });
+      }
+      function statusText(s){ return {new:'Kitchen mein bheja gaya', preparing:'Kitchen mein bann raha hai', ready:'Ready — serve hona baqi', served:'Serve ho gaya — bill baqi'}[s]||s; }
+
+      /* ================= GUEST ZONE (staff side) ================= */
+      function drawQR(canvas, seedStr){
+        var ctx = canvas.getContext('2d'); var N=21; canvas.width=N; canvas.height=N;
+        var h=0; for(var i=0;i<seedStr.length;i++){ h=(h*31 + seedStr.charCodeAt(i))>>>0; }
+        function rnd(){ h=(h*1103515245 + 12345)>>>0; return (h>>16)&1; }
+        ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,N,N); ctx.fillStyle='#1C1410';
+        for(var y=0;y<N;y++) for(var x=0;x<N;x++){ if(rnd()) ctx.fillRect(x,y,1,1); }
+        function finder(fx,fy){ ctx.fillStyle='#1C1410'; ctx.fillRect(fx,fy,7,7); ctx.fillStyle='#FFFFFF'; ctx.fillRect(fx+1,fy+1,5,5); ctx.fillStyle='#1C1410'; ctx.fillRect(fx+2,fy+2,3,3); }
+        ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,8,8); ctx.fillRect(N-8,0,8,8); ctx.fillRect(0,N-8,8,8);
+        finder(0,0); finder(N-7,0); finder(0,N-7);
+      }
+      function renderGuest(){
+        var html = '<h2 class="sec">Guest Zone</h2><p class="sub">Har table ka QR — guest scan kar ke khud menu se order karta hai. Neeche har table ka live bill hai.</p>';
+        html += '<h3 class="blk">Table QR codes</h3><div class="qrgrid">';
+        TABLES.forEach(function(t){
+          html += '<div class="qrcard"><canvas data-qr="'+t.id+'" width="21" height="21" aria-label="QR code '+esc(tableName(t))+'"></canvas>'
+            + '<div class="qname">'+esc(tableName(t))+'</div><div class="qhint">Scan → menu → order</div>'
+            + '<button class="btn ghost sm block" data-guestopen="'+t.id+'">Guest view kholein</button></div>';
+        });
+        html += '</div>';
+        html += '<h3 class="blk">Live bills</h3>';
+        var act = activeOrders().sort(function(a,b){ return a.placedAt-b.placedAt; });
+        if(!act.length) html += '<div class="empty"><b>Koi bill nahi</b>Active order hoga to us ka live bill yahan dikhega.</div>';
+        act.forEach(function(o){
+          html += '<div class="ocard" id="bill-'+o.tableId+'"><div class="o-head"><div><div class="o-code">'+esc(tableName(getTable(o.tableId)))+' · Order #'+o.code+'</div>'
+            + '<div class="o-meta">'+statusText(o.status)+(o.waiterId && getWaiter(o.waiterId)?' · Waiter: '+esc(getWaiter(o.waiterId).name):'')+'</div></div>'+statusPill(o)+'</div>'
+            + orderItemsHtml(o)
+            + '<div style="margin-top:10px"><div class="bill-line tax"><span>Subtotal</span><span class="num">'+rs(orderSubtotal(o))+'</span></div>'
+            + '<div class="bill-line tax"><span>Tax ('+state.settings.tax+'%)</span><span class="num">'+rs(orderTax(o))+'</span></div>'
+            + '<div class="bill-line total"><span>Total</span><span class="num">'+rs(orderTotal(o))+'</span></div></div>'
+            + '<div class="o-foot"><button class="btn amber" data-pay="'+o.code+'">Split &amp; Pay →</button></div></div>';
+        });
+        $('#view-guest').innerHTML = html;
+        $$('#view-guest [data-qr]').forEach(function(c){ drawQR(c, 'table-'+c.getAttribute('data-qr')); });
+        $$('#view-guest [data-guestopen]').forEach(function(b){ b.addEventListener('click', function(){ openGuest(b.getAttribute('data-guestopen')); }); });
+        $$('#view-guest [data-pay]').forEach(function(b){ b.addEventListener('click', function(){ openPaySheet(+b.getAttribute('data-pay')); }); });
+      }
+
+      /* ================= SPLIT & PAY + RECEIPT + REVIEW ================= */
+      var payState = { code:null, split:1, method:'Cash', rated:0 };
+      function openSheet(html){ $('#sheet').innerHTML=html; $('#overlay').classList.add('open'); }
+      function closeSheet(){ $('#overlay').classList.remove('open'); }
+      $('#overlay').addEventListener('click', function(e){ if(e.target===this) closeSheet(); });
+      function findOrder(code){ for(var i=0;i<state.orders.length;i++) if(state.orders[i].code===code) return state.orders[i]; return null; }
+      function splitShares(total, n){
+        var base = Math.floor(total/n); var shares=[]; var rest = total - base*n;
+        for(var i=0;i<n;i++) shares.push(base + (i===0?rest:0));
+        return shares;
+      }
+      function openPaySheet(code){
+        var o = findOrder(code); if(!o) return;
+        payState = { code:code, split:1, method:'Cash', rated:0 };
+        var total = orderTotal(o);
+        var html = '<h3>Split &amp; Pay — Order #'+o.code+'</h3><p class="s-sub">'+esc(tableName(getTable(o.tableId)))+' · Total <b class="num">'+rs(total)+'</b> (tax shamil)</p>'
+          + '<div class="field"><label>Kitne logon mein split karein?</label><div class="stepper" style="width:fit-content"><button id="spDec">−</button><span class="q num" id="spCount">1</span><button id="spInc">+</button></div></div>'
+          + '<div id="spShares"></div>'
+          + '<div class="field" style="margin-top:14px"><label>Payment method</label><div class="seg" id="payMethods">'
+          + ['Cash','Card','Online'].map(function(m){ return '<button data-m="'+m+'"'+(m==='Cash'?' class="on"':'')+'>'+m+'</button>'; }).join('') + '</div></div>'
+          + '<div class="rowflex" style="margin-top:16px"><button class="btn ghost" id="payCancel" style="flex:1">Cancel</button><button class="btn" id="payNow" style="flex:2">Pay karein · <span class="num" id="payBtnAmt">'+rs(total)+'</span></button></div>';
+        openSheet(html);
+        function drawShares(){
+          var sh = splitShares(total, payState.split);
+          $('#spShares').innerHTML = sh.map(function(s,i){ return '<div class="splitrow"><span style="font-weight:700">Person '+(i+1)+'</span><span class="num" style="margin-left:auto;font-weight:800">'+rs(s)+'</span></div>'; }).join('');
+          $('#spCount').textContent = payState.split;
+        }
+        drawShares();
+        $('#spInc').addEventListener('click', function(){ if(payState.split<8){ payState.split++; drawShares(); } });
+        $('#spDec').addEventListener('click', function(){ if(payState.split>1){ payState.split--; drawShares(); } });
+        $$('#payMethods button').forEach(function(b){ b.addEventListener('click', function(){ payState.method=b.getAttribute('data-m'); $$('#payMethods button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); }); });
+        $('#payCancel').addEventListener('click', closeSheet);
+        $('#payNow').addEventListener('click', function(){
+          var sh = splitShares(total, payState.split);
+          o.payment = { method: payState.method, splits: sh.map(function(s,i){ return {label:'Person '+(i+1), amount:s}; }) };
+          o.status = 'paid';
+          showReceipt(o);
+          render();
+        });
+      }
+      function showReceipt(o){
+        var w = o.waiterId ? getWaiter(o.waiterId) : null;
+        var html = '<h3>Receipt</h3><p class="s-sub">Payment ho gaya — table free ho gaya hai.</p>'
+          + '<div class="receipt"><div class="r-head"><b>'+esc(state.settings.name)+'</b><div class="note">Order #'+o.code+' · '+esc(tableName(getTable(o.tableId)))+(w?' · Waiter: '+esc(w.name):'')+'</div></div>'
+          + o.items.map(function(it){ return '<div class="bill-line"><span>'+esc(it.name)+' × '+it.qty+'</span><span class="num">'+rs(it.price*it.qty)+'</span></div>'; }).join('')
+          + '<div class="bill-line tax"><span>Subtotal</span><span class="num">'+rs(orderSubtotal(o))+'</span></div>'
+          + '<div class="bill-line tax"><span>Tax ('+state.settings.tax+'%)</span><span class="num">'+rs(orderTax(o))+'</span></div>'
+          + '<div class="bill-line total"><span>Total ('+esc(o.payment.method)+')</span><span class="num">'+rs(orderTotal(o))+'</span></div>'
+          + (o.payment.splits.length>1 ? '<div class="divider"></div><div class="note" style="font-weight:800;margin-bottom:4px">Split:</div>' + o.payment.splits.map(function(s){ return '<div class="bill-line"><span>'+esc(s.label)+'</span><span class="num">'+rs(s.amount)+'</span></div>'; }).join('') : '')
+          + '</div>'
+          + '<h3 style="margin-top:20px;text-align:center">Guest se review lein</h3>'
+          + '<div class="bigstars" id="rateStars">' + [1,2,3,4,5].map(function(n){ return '<button data-star="'+n+'" aria-label="'+n+' stars">★</button>'; }).join('') + '</div>'
+          + '<textarea class="inp" id="revText" placeholder="Comment (optional) — khana kaisa laga?"></textarea>'
+          + '<div class="rowflex" style="margin-top:12px"><button class="btn ghost" id="revSkip" style="flex:1">Skip</button><button class="btn" id="revSave" style="flex:2">Review save karein</button></div>';
+        openSheet(html);
+        $$('#rateStars button').forEach(function(b){ b.addEventListener('click', function(){
+          payState.rated = +b.getAttribute('data-star');
+          $$('#rateStars button').forEach(function(x){ x.classList.toggle('on', +x.getAttribute('data-star')<=payState.rated); });
+        }); });
+        $('#revSkip').addEventListener('click', function(){ closeSheet(); toast('Payment complete — shukriya!'); });
+        $('#revSave').addEventListener('click', function(){
+          if(!payState.rated){ toast('Pehle stars select karein', true); return; }
+          state.reviews.push({ stars: payState.rated, text: $('#revText').value.trim(), table: tableName(getTable(o.tableId)), when: Date.now() });
+          closeSheet(); toast('Review save ho gaya — shukriya!'); render();
+        });
+      }
+
+      /* ================= MANAGE ================= */
+      function renderManage(){
+        var html = '<h2 class="sec">Manage</h2><p class="sub">Waiters, menu aur settings — sab yahan se control karein.</p>';
+        html += '<h3 class="blk">Waiters</h3>'
+          + '<div class="rowflex"><input class="inp" id="newWaiterName" placeholder="Naye waiter ka naam" style="flex:1;min-width:180px"><button class="btn" id="addWaiter">+ Add karein</button></div>'
+          + '<div style="margin-top:12px">' + state.waiters.map(function(w){
+              return '<div class="ocard" style="display:flex;align-items:center;gap:11px"><span class="avatar">'+esc(w.name.charAt(0).toUpperCase())+'</span><b style="flex:1">'+esc(w.name)+'</b>'
+                + '<label class="switch" style="margin:0"><input type="checkbox" data-mgduty="'+w.id+'"'+(w.onDuty?' checked':'')+'> '+(w.onDuty?'On':'Off')+'</label>'
+                + '<button class="btn danger sm" data-delwaiter="'+w.id+'">Delete</button></div>';
+            }).join('') + '</div>';
+        html += '<h3 class="blk">Settings</h3><div class="ocard">'
+          + '<div class="field"><label>Restaurant ka naam</label><input class="inp" id="setName" value="'+esc(state.settings.name)+'"></div>'
+          + '<div class="field"><label>Tax %</label><input class="inp num" id="setTax" type="number" min="0" max="30" step="0.5" value="'+state.settings.tax+'"></div>'
+          + '<button class="btn" id="saveSettings">Save karein</button>'
+          + '<p class="note" style="margin-top:12px">Ye static demo hai — data isi session mein rehta hai, page band karne par reset ho jata hai. Asli system mein data cloud database mein save hota hai.</p></div>';
+        html += '<h3 class="blk">Menu items ('+MENU.length+')</h3>'
+          + '<div class="rowflex"><input class="inp" id="newItemName" placeholder="Item ka naam" style="flex:2;min-width:150px"><input class="inp num" id="newItemPrice" type="number" min="0" placeholder="Price PKR" style="flex:1;min-width:110px"><select class="inp" id="newItemCat" style="flex:1;min-width:120px">'
+          + cats().filter(function(c){ return c!=='Sab'; }).map(function(c){ return '<option>'+esc(c)+'</option>'; }).join('') + '</select><button class="btn" id="addItem">+ Add</button></div>'
+          + '<div style="margin-top:12px">' + MENU.map(function(m){
+              return '<div class="ocard" style="display:flex;align-items:center;gap:11px"><div style="flex:1"><b>'+esc(m.name)+'</b><div class="note">'+esc(m.cat)+'</div></div><b class="num">'+rs(m.price)+'</b><button class="btn danger sm" data-delitem="'+m.id+'">Delete</button></div>';
+            }).join('') + '</div>';
+        $('#view-manage').innerHTML = html;
+        $('#addWaiter').addEventListener('click', function(){
+          var name = $('#newWaiterName').value.trim(); if(!name){ toast('Waiter ka naam likhein', true); return; }
+          state.waiters.push({ id:'w'+Date.now(), name:name, onDuty:true }); toast(name+' add ho gaya — on duty'); render();
+        });
+        $$('#view-manage [data-mgduty]').forEach(function(cb){ cb.addEventListener('change', function(){ var w=getWaiter(cb.getAttribute('data-mgduty')); if(w){ w.onDuty=cb.checked; render(); } }); });
+        $$('#view-manage [data-delwaiter]').forEach(function(b){ b.addEventListener('click', function(){
+          var wid=b.getAttribute('data-delwaiter'); var w=getWaiter(wid);
+          state.orders.forEach(function(o){ if(o.waiterId===wid && o.status!=='paid') o.waiterId=null; });
+          state.waiters = state.waiters.filter(function(x){ return x.id!==wid; });
+          toast((w?w.name:'Waiter')+' delete ho gaya — active orders unassign kar diye'); render();
+        }); });
+        $('#saveSettings').addEventListener('click', function(){
+          var nm=$('#setName').value.trim(); if(nm){ state.settings.name=nm; $('#bizName').textContent=nm; }
+          var tx=parseFloat($('#setTax').value); if(!isNaN(tx) && tx>=0 && tx<=30) state.settings.tax=tx;
+          toast('Settings save ho gayi'); render();
+        });
+        $('#addItem').addEventListener('click', function(){
+          var nm=$('#newItemName').value.trim(); var pr=parseFloat($('#newItemPrice').value);
+          if(!nm || isNaN(pr) || pr<0){ toast('Item ka naam aur sahi price likhein', true); return; }
+          MENU.push({ id:'m'+Date.now(), name:nm, price:pr, cat:$('#newItemCat').value }); toast(nm+' menu mein add ho gaya'); render();
+        });
+        $$('#view-manage [data-delitem]').forEach(function(b){ b.addEventListener('click', function(){
+          var id=b.getAttribute('data-delitem'); for(var i=0;i<MENU.length;i++) if(MENU[i].id===id){ MENU.splice(i,1); break; }
+          toast('Item delete ho gaya'); render();
+        }); });
+      }
+    </script>
+    <script>
+      /* ================= GUEST MODE (QR view) ================= */
+      var guestState = { tableId:null, cart:{}, cat:'Sab' };
+      function guestOrder(){ return guestState.tableId ? activeOrderFor(guestState.tableId) : null; }
+      function openGuest(tableId){
+        guestState.tableId = tableId; guestState.cart = {}; guestState.cat='Sab'; orderState.cat='Sab';
+        document.body.classList.add('guest'); renderGuestView(); window.scrollTo({top:0});
+      }
+      function closeGuest(){ document.body.classList.remove('guest'); render(); }
+      function renderGuestView(){
+        var t = getTable(guestState.tableId); if(!t) return;
+        var o = guestOrder();
+        var html = '<div class="g-head"><h2>'+esc(state.settings.name)+'</h2><p>'+esc(tableName(t))+' · Menu se order karein — bill live yahin dikhega</p></div><div class="g-wrap">';
+        if(o){
+          var stepIdx = {new:1, preparing:2, ready:3, served:4}[o.status] || 1;
+          var labels = ['Order ho gaya','Kitchen mein hai','Ready','Serve ho gaya'];
+          html += '<div class="ocard"><div class="o-code" style="font-weight:800;font-size:16px">Aap ka order #'+o.code+'</div>'
+            + '<div class="steps">' + labels.map(function(l,i){ return '<div class="'+(i<stepIdx?'done':'')+'">'+l+'</div>'; }).join('') + '</div>'
+            + '<div class="o-meta" style="color:var(--muted);font-weight:600;font-size:13px">'+statusText(o.status)+(o.waiterId && getWaiter(o.waiterId)?' · Waiter: '+esc(getWaiter(o.waiterId).name):'')+' · Time: <span data-elapsed="'+o.code+'">'+fmtElapsed(elapsedMs(o))+'</span></div>'
+            + orderItemsHtml(o)
+            + '<div style="margin-top:10px"><div class="bill-line tax"><span>Subtotal</span><span class="num">'+rs(orderSubtotal(o))+'</span></div>'
+            + '<div class="bill-line tax"><span>Tax ('+state.settings.tax+'%)</span><span class="num">'+rs(orderTax(o))+'</span></div>'
+            + '<div class="bill-line total"><span>Total bill</span><span class="num">'+rs(orderTotal(o))+'</span></div></div>'
+            + '<p class="note" style="margin-top:10px">Payment counter par ya waiter se — Cash / Card / Online. Khana serve hone ke baad counter par stars review bhi de sakte hain.</p></div>';
+        } else {
+          html += '<div class="chips">' + cats().map(function(c){ return '<button class="chip'+(guestState.cat===c?' on':'')+'" data-gcat="'+c+'">'+esc(c)+'</button>'; }).join('') + '</div>'
+            + '<div id="gMenu">' + guestMenuHtml() + '</div>'
+            + '<div class="cartbar"><div class="ct"><b class="num" id="gCartTotal">'+rs(cartTotal(guestState.cart))+'</b><div><span id="gCartCount">'+cartCount(guestState.cart)+'</span> items</div></div><button class="btn" id="gPlace">Order karein →</button></div>';
+        }
+        html += '<button class="btn ghost block" id="gExit" style="margin-top:14px">← Staff view par wapas</button></div>';
+        $('#guestView').innerHTML = html;
+        $$('#guestView [data-gcat]').forEach(function(b){ b.addEventListener('click', function(){ guestState.cat=b.getAttribute('data-gcat'); orderState.cat=guestState.cat; renderGuestView(); }); });
+        if(!o){
+          bindSteppers($('#guestView'), guestState.cart, 'gst', function(){
+            $('#gCartTotal').textContent = rs(cartTotal(guestState.cart));
+            $('#gCartCount').textContent = cartCount(guestState.cart);
+          });
+          $('#gPlace').addEventListener('click', function(){
+            if(!cartCount(guestState.cart)){ toast('Pehle kuch items add karein', true); return; }
+            var items=[]; for(var k in guestState.cart){ MENU.forEach(function(m){ if(m.id===k) items.push({id:m.id, name:m.name, price:m.price, qty:guestState.cart[k]}); }); }
+            state.orders.push({ code: state.seq++, tableId: guestState.tableId, waiterId:null, items:items, status:'new', placedAt:Date.now(), servedAt:null, payment:null, guest:true });
+            guestState.cart = {};
+            toast('Order kitchen mein bhej diya gaya'); renderGuestView(); renderNav();
+          });
+        }
+        $('#gExit').addEventListener('click', closeGuest);
+      }
+      function guestMenuHtml(){
+        var keep = orderState.cat; orderState.cat = guestState.cat;
+        var h = '<div class="mgrid">' + MENU.filter(function(m){ return guestState.cat==='Sab' || m.cat===guestState.cat; }).map(function(m){
+          var q = guestState.cart[m.id]||0;
+          return '<div class="mitem"><div class="mi-body"><div class="mi-cat">'+esc(m.cat)+'</div><div class="mi-name">'+esc(m.name)+'</div><div class="mi-price num">'+rs(m.price)+'</div></div>'
+            + '<div class="stepper"><button data-gst-dec="'+m.id+'" aria-label="Kam karein">−</button><span class="q num" id="gst-q-'+m.id+'">'+q+'</span><button data-gst-inc="'+m.id+'" aria-label="Barhayein">+</button></div></div>';
+        }).join('') + '</div>';
+        orderState.cat = keep; return h;
+      }
+
+      /* ================= RENDER LOOP ================= */
+      function render(){
+        if(currentTab==='home') renderHome();
+        else if(currentTab==='order') renderOrder();
+        else if(currentTab==='kitchen') renderKitchen();
+        else if(currentTab==='waiter') renderWaiter();
+        else if(currentTab==='guest') renderGuest();
+        else if(currentTab==='manage') renderManage();
+        renderNav();
+        if(document.body.classList.contains('guest')) renderGuestView();
+      }
+      setInterval(function(){
+        $$('[data-elapsed]').forEach(function(el){
+          var code=+el.getAttribute('data-elapsed'); var o=findOrder(code);
+          if(o) el.textContent = fmtElapsed(elapsedMs(o));
+        });
+        var c=$('#clock'); if(c){ var d=new Date(); c.textContent = d.toLocaleTimeString('en-PK',{hour:'numeric',minute:'2-digit'}); }
+      }, 1000);
+
+      /* ================= INIT ================= */
+      $('#bizName').textContent = state.settings.name;
+      renderNav(); goTab('home');
+      (function(){
+        var m = /[?&]table=([A-Za-z0-9]+)/.exec(window.location.search||'');
+        if(m){ var t=getTable(m[1].toUpperCase()); if(t) openGuest(t.id); }
+      })();
+    </script>
+  </body>
+</html>
