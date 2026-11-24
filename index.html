@@ -215,12 +215,11 @@ nav.main button.active{background:var(--navy);color:#fff;border-color:var(--navy
     <button class="btn ghost sm" id="authBack">← QR Tables</button>
     <div class="card" style="margin-top:14px">
       <h2 style="margin:0 0 4px;color:var(--navy)">Staff Login</h2>
-      <p class="note">Seeded login — username <b>admin</b>, password <b>Asad@123</b>, role <b>Owner</b>.</p>
+      <p class="note">Seeded login — username <b>admin</b>, role <b>Owner</b>. Is per-visitor demo mein koi password nahi hai — sirf username aur role se login hota hai.</p>
       <div class="demo-note">Demo note: Accounts aur data sirf is browser ke localStorage mein hain — koi server login nahi hai.</div>
       <div class="seg" style="margin-bottom:14px"><button id="tabLogin" class="on">Login</button><button id="tabSignup">Sign up</button></div>
       <div class="err-box" id="authErr"></div>
       <div class="field"><label>Username</label><input class="inp" id="authUser" autocomplete="username" /></div>
-      <div class="field"><label>Password</label><input class="inp" id="authPass" type="password" autocomplete="current-password" /></div>
       <div class="field"><label>Role</label><select class="inp" id="authRole"></select></div>
       <button class="btn gold block" id="authSubmit">Login →</button>
     </div>
@@ -298,11 +297,30 @@ var ROLES={
 var TAX=5, LS_KEY='shizcon_restaurant_v7';
 
 /* ================= STATE (localStorage) ================= */
-function defaultState(){return {users:[{username:'admin',password:'Asad@123',role:'Owner'}],orders:[],rooms:[],staff:[],waiters:[],purchases:[],cash:[],seq:1001};}
+function defaultState(){return {users:[{username:'admin',role:'Owner'}],orders:[],rooms:[],staff:[],waiters:[],purchases:[],cash:[],seq:1001};}
 var state;
 try{ state=JSON.parse(localStorage.getItem(LS_KEY))||defaultState(); }catch(e){ state=defaultState(); }
 if(!state.users||!state.users.length) state.users=defaultState().users;
-function save(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){} }
+function newId(p){return p+'-'+Date.now()+'-'+Math.floor(Math.random()*1000000);}
+function syncLedger(){
+ /* Sub-fields ko jorna: paid orders aur room bills -> cash IN, purchases aur payroll -> cash OUT.
+    Derived (auto) entries har save par source records se dobara banti hain — edit/delete khud reflect ho jata hai.
+    Manual cash entries (bina ref ke) waisi hi rehti hain. */
+ if(!state||!state.cash) return;
+ var oldByRef={};
+ state.cash.forEach(function(c){if(c&&c.ref)oldByRef[c.ref]=c;});
+ state.purchases.forEach(function(p){if(!p.id)p.id=newId('pur');if(!p.at){var pd=p.date?new Date(p.date).getTime():0;p.at=pd||Date.now();}});
+ state.rooms.forEach(function(r){if(!r.id)r.id=newId('room');if(!r.at){var rd=r.checkin?new Date(r.checkin).getTime():0;r.at=rd||Date.now();}});
+ var derived=[];
+ paidOrders().forEach(function(o){var t=getTable(o.tableId);derived.push({type:'IN',amount:total(o),desc:'Order #'+o.code+' · '+(t?t.name:o.tableId)+' · '+(o.paymentMethod||'Cash'),at:(oldByRef['order:'+o.code]?oldByRef['order:'+o.code].at:(o.paidAt||o.placedAt)),ref:'order:'+o.code,auto:true});});
+ state.rooms.forEach(function(r){if((r.guest||r.status==='Occupied')&&(+r.total||0)>0)derived.push({type:'IN',amount:+r.total,desc:'Room bill · '+r.name+' · '+r.nights+' night'+(r.nights>1?'s':'')+' × '+rs(r.rate),at:(oldByRef['room:'+r.id]?oldByRef['room:'+r.id].at:r.at),ref:'room:'+r.id,auto:true});});
+ state.purchases.forEach(function(p){if((+p.amount||0)>0)derived.push({type:'OUT',amount:+p.amount,desc:'Purchase · '+p.item+(p.vendor?' · '+p.vendor:''),at:(oldByRef['purchase:'+p.id]?oldByRef['purchase:'+p.id].at:p.at),ref:'purchase:'+p.id,auto:true});});
+ var activeStaff=state.staff.filter(function(s){return s.status==='active';});
+ var payroll=activeStaff.reduce(function(a,s){return a+(+s.salary||0);},0);
+ if(payroll>0)derived.push({type:'OUT',amount:payroll,desc:'Monthly payroll · active staff ('+activeStaff.length+')',at:(oldByRef['payroll:monthly']?oldByRef['payroll:monthly'].at:Date.now()),ref:'payroll:monthly',auto:true});
+ state.cash=state.cash.filter(function(c){return c&&!c.auto&&!c.ref;}).concat(derived);
+}
+function save(){ syncLedger(); try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){} }
 var session={user:null,role:null};
 var currentTab='roles';
 
@@ -387,16 +405,16 @@ function setAuthMode(m){authMode=m;$('#tabLogin').classList.toggle('on',m==='log
 $('#tabLogin').addEventListener('click',function(){setAuthMode('login');});
 $('#tabSignup').addEventListener('click',function(){setAuthMode('signup');});
 $('#authSubmit').addEventListener('click',function(){
- var u=$('#authUser').value.trim(),p=$('#authPass').value,r=$('#authRole').value,err=$('#authErr');
+ var u=$('#authUser').value.trim(),r=$('#authRole').value,err=$('#authErr');
  function fail(msg){err.textContent=msg;err.style.display='block';}
- if(!u||!p){fail('Username aur password likhein.');return;}
+ if(!u){fail('Username likhein.');return;}
  if(authMode==='signup'){
    for(var i=0;i<state.users.length;i++)if(state.users[i].username.toLowerCase()===u.toLowerCase()){fail('Ye username pehle se maujood hai — login karein.');return;}
-   state.users.push({username:u,password:p,role:r});save();
+   state.users.push({username:u,role:r});save();
    startSession(u,r);toast('Account ban gaya — welcome!');
  }else{
    var found=null;for(var j=0;j<state.users.length;j++)if(state.users[j].username===u)found=state.users[j];
-   if(!found||found.password!==p){fail('Ghalat username ya password — dobara koshish karein.');return;}
+   if(!found){fail('Ye username maujood nahi hai — pehle Sign up karein.');return;}
    if(found.role!==r){fail('Is account ka role "'+found.role+'" hai — role select mein wohi choose karein.');return;}
    startSession(found.username,found.role);toast('Welcome, '+found.username+'!');
  }
@@ -443,7 +461,10 @@ function cartHtml(cart,prefix){
  if(!cart.length)return '<div class="empty"><b>Cart khaali hai</b>Menu se items add karein.</div>';
  var s=cart.reduce(function(a,l){return a+l.price*l.qty;},0);
  var h='<ul class="o-items">'+cart.map(function(l,i){return '<li><span class="qty num">×'+l.qty+'</span><span>'+esc(l.name)+' <span class="note">('+esc(l.size)+' · '+esc(l.spice)+(l.note?' · '+esc(l.note):'')+')</span></span><span class="amt num">'+rs(l.price*l.qty)+'</span> <button class="btn ghost sm" data-'+prefix+'-rm="'+i+'">×</button></li>';}).join('')+'</ul>';
- h+='<div class="bill-line" style="margin-top:8px"><span>Subtotal</span><b class="num">'+rs(s)+'</b></div>';
+ var tx=Math.round(s*TAX/100);
+ h+='<div class="bill-line" style="margin-top:8px"><span>Subtotal</span><b class="num">'+rs(s)+'</b></div>'
+  +'<div class="bill-line tax"><span>Tax (5%)</span><span class="num">'+rs(tx)+'</span></div>'
+  +'<div class="bill-line total"><span>Total</span><span class="num">'+rs(s+tx)+'</span></div>';
  return h;
 }
 function bindPicker(root,prefix,cart,rerender){
@@ -458,29 +479,31 @@ function bindPicker(root,prefix,cart,rerender){
 function orderFormHtml(prefix){
  var h='<div class="grid2"><div class="card"><h3 style="margin-top:0;color:var(--navy)">Order details</h3>'
   +'<div class="field"><label>Table</label><select class="inp" id="'+prefix+'Table">'+TABLES.map(function(t){return '<option value="'+t.id+'"'+(formState.tableId===t.id?' selected':'')+'>'+esc(t.name)+' ('+t.kind+', '+t.seats+' seats)</option>';}).join('')+'</select></div>'
-  +'<div class="field"><label>Order type</label><select class="inp" id="'+prefix+'Type"><option value="dine-in">Dine-in</option><option value="takeaway">Takeaway</option><option value="online">Online</option></select></div>'
-  +'<div class="field"><label>Guest name (optional)</label><input class="inp" id="'+prefix+'Guest" placeholder="Guest ka naam"></div>'
-  +'<div class="field"><label>Waiter (optional)</label><select class="inp" id="'+prefix+'Waiter"><option value="">— Koi nahi —</option>'+state.waiters.map(function(w){return '<option>'+esc(w.name)+'</option>';}).join('')+'</select></div>'
+  +'<div class="field"><label>Order type</label><select class="inp" id="'+prefix+'Type"><option value="dine-in"'+(formState.type==='dine-in'?' selected':'')+'>Dine-in</option><option value="takeaway"'+(formState.type==='takeaway'?' selected':'')+'>Takeaway</option><option value="online"'+(formState.type==='online'?' selected':'')+'>Online</option></select></div>'
+  +'<div class="field"><label>Guest name (optional)</label><input class="inp" id="'+prefix+'Guest" placeholder="Guest ka naam" value="'+esc(formState.guest||'')+'"></div>'
+  +'<div class="field"><label>Waiter (optional)</label><select class="inp" id="'+prefix+'Waiter"><option value="">— Koi nahi —</option>'+state.waiters.map(function(w){return '<option'+(formState.waiter===w.name?' selected':'')+'>'+esc(w.name)+'</option>';}).join('')+'</select></div>'
   +'<h3 style="color:var(--navy)">Cart</h3><div id="'+prefix+'Cart">'+cartHtml(formState.lines,prefix)+'</div>'
   +'<button class="btn green block" style="margin-top:12px" id="'+prefix+'Place">Order lagayein → Kitchen</button></div>'
   +'<div><h3 style="margin-top:0;color:var(--navy)">Menu</h3><div id="'+prefix+'Picker">'+menuPickerHtml(prefix,formState.lines)+'</div></div></div>';
  return h;
 }
 function bindOrderForm(prefix,rerender){
- bindPicker($('#view-'+currentTab),prefix,formState.lines,rerender);
- var rm=$$('[data-'+prefix+'-rm]');rm.forEach(function(b){/* handled in bindPicker */});
+ /* Item add/remove par form dobara banta hai — pehle table/guest/waiter/type snapshot le lo taake selection aur naam gayab na ho.
+    Cart remove sirf bindPicker bind karta hai (dohri binding se aik click par 2 items delete ho jate thay). */
+ function snapshot(){var t=$('#'+prefix+'Table');if(t)formState.tableId=t.value;var ty=$('#'+prefix+'Type');if(ty)formState.type=ty.value;var g=$('#'+prefix+'Guest');if(g)formState.guest=g.value;var w=$('#'+prefix+'Waiter');if(w)formState.waiter=w.value;}
+ function wrappedRender(){snapshot();rerender();}
+ bindPicker($('#view-'+currentTab),prefix,formState.lines,wrappedRender);
  $('#'+prefix+'Place').addEventListener('click',function(){
+   snapshot();
    if(!formState.lines.length){toast('Pehle items add karein',true);return;}
-   var tid=$('#'+prefix+'Table').value;
+   var tid=formState.tableId;
    if(activeOrderFor(tid)){toast('Is table par pehle se active order hai',true);return;}
-   var o={code:state.seq++,tableId:tid,guestName:$('#'+prefix+'Guest').value.trim(),waiter:$('#'+prefix+'Waiter').value,orderType:$('#'+prefix+'Type').value,
+   var o={code:state.seq++,tableId:tid,guestName:(formState.guest||'').trim(),waiter:formState.waiter,orderType:formState.type,
      items:formState.lines.slice(),status:'new',placedAt:Date.now(),targetMins:null,prepStartedAt:null,lateNote:'',paidAt:null,paymentMethod:null,splitN:1,rating:null,reviewComment:''};
-   state.orders.push(o);save();formState.lines=[];
+   state.orders.push(o);save();formState.lines=[];formState.guest='';formState.waiter='';
    toast('Order #'+o.code+' kitchen mein bhej diya gaya');
    if(ROLES[session.role].tabs.indexOf('kitchen')>=0)goTab('kitchen');else rerender();
  });
- // cart remove buttons need rebinding after render — they are inside cartHtml, handle via delegation below
- $$('#'+prefix+'Cart [data-'+prefix+'-rm]').forEach(function(b){b.addEventListener('click',function(){formState.lines.splice(+b.getAttribute('data-'+prefix+'-rm'),1);rerender();});});
 }
 function itemsHtml(o){
  return '<ul class="o-items">'+o.items.map(function(it){return '<li><span class="qty num">×'+it.qty+'</span><span>'+esc(it.name)+' <span class="note">('+esc(it.size||'Regular')+' · '+esc(it.spice||'Mild')+(it.note?' · '+esc(it.note):'')+')</span></span><span class="amt num">'+rs(it.price*it.qty)+'</span></li>';}).join('')+'</ul>';
@@ -571,7 +594,6 @@ function openEditOrder(code){
  function draw(){
   openSheet('<h3>Order #'+o.code+' — items edit</h3><p class="note">Unpaid order ke items badlein — bill khud update ho jayega.</p><div id="editCart">'+cartHtml(cart,'edit')+'</div><h4 class="serif">Item add karein</h4>'+menuPickerHtml('edit',cart)+'<div style="display:flex;gap:8px;margin-top:14px"><button class="btn ghost" style="flex:1" id="editCancel">Cancel</button><button class="btn green" style="flex:2" id="editSave">Save karein</button></div>');
   bindPicker($('#sheet'),'edit',cart,draw);
-  $$('#sheet [data-edit-rm]').forEach(function(b){b.addEventListener('click',function(){cart.splice(+b.getAttribute('data-edit-rm'),1);draw();});});
   $('#editCancel').addEventListener('click',closeSheet);
   $('#editSave').addEventListener('click',function(){if(!cart.length){toast('Order khaali nahi ho sakta',true);return;}o.items=cart;save();closeSheet();toast('Order update — bill bhi update ho gaya');render();});
  }
@@ -666,16 +688,17 @@ function roomsHtml(prefix){
   +'<button class="btn gold" id="'+prefix+'RoomAdd">Room add karein</button></div>';
  return h;
 }
-function bindRooms(prefix,rerender){
+function bindRooms(prefix,rerender,root){
  var add=$('#'+prefix+'RoomAdd');if(!add)return;
  add.addEventListener('click',function(){
   var name=$('#'+prefix+'RoomName').value.trim();if(!name){toast('Room ka naam likhein (e.g. Room 101)',true);return;}
   var rate=parseFloat($('#'+prefix+'RoomRate').value)||0,ci=$('#'+prefix+'RoomIn').value,co=$('#'+prefix+'RoomOut').value,n=nightsBetween(ci,co);
-  state.rooms.push({name:name,type:$('#'+prefix+'RoomType').value,rate:rate,guest:$('#'+prefix+'RoomGuest').value.trim(),phone:$('#'+prefix+'RoomPhone').value.trim(),checkin:ci,checkout:co,nights:n,total:rate*n,status:$('#'+prefix+'RoomStatus').value});
+  state.rooms.push({id:newId('room'),at:Date.now(),name:name,type:$('#'+prefix+'RoomType').value,rate:rate,guest:$('#'+prefix+'RoomGuest').value.trim(),phone:$('#'+prefix+'RoomPhone').value.trim(),checkin:ci,checkout:co,nights:n,total:rate*n,status:$('#'+prefix+'RoomStatus').value});
   save();toast('Room add ho gaya');rerender();
  });
- $$('[data-toggle-room]').forEach(function(b){b.addEventListener('click',function(){var r=state.rooms[+b.getAttribute('data-toggle-room')];r.status=r.status==='Occupied'?'Available':'Occupied';save();rerender();});});
- $$('[data-del-room]').forEach(function(b){b.addEventListener('click',function(){state.rooms.splice(+b.getAttribute('data-del-room'),1);save();rerender();});});
+ /* Sirf is view ke buttons bind karo — doosre (hidden) view ke buttons par handler lage to toggle double-fire hota tha */
+ $$('[data-toggle-room]',root).forEach(function(b){b.addEventListener('click',function(){var r=state.rooms[+b.getAttribute('data-toggle-room')];r.status=r.status==='Occupied'?'Available':'Occupied';save();rerender();});});
+ $$('[data-del-room]',root).forEach(function(b){b.addEventListener('click',function(){state.rooms.splice(+b.getAttribute('data-del-room'),1);save();rerender();});});
 }
 
 /* ================= COUNTER ================= */
@@ -693,7 +716,7 @@ function renderCounter(){
  TABLES.forEach(function(t){makeQR($('[data-cqr="'+t.id+'"]'),tableUrl(t.id),84);});
  $$('#view-counter [data-cpay]').forEach(function(b){b.addEventListener('click',function(){openPaySheet(+b.getAttribute('data-cpay'));});});
  $$('#view-counter [data-cedit]').forEach(function(b){b.addEventListener('click',function(){openEditOrder(+b.getAttribute('data-cedit'));});});
- bindOrderForm('counter',renderCounter);bindRooms('ct',renderCounter);
+ bindOrderForm('counter',renderCounter);bindRooms('ct',renderCounter,$('#view-counter'));
 }
 
 /* ================= HR ================= */
@@ -716,7 +739,7 @@ function renderHR(){
  $('#stAdd').addEventListener('click',function(){var n=$('#stName').value.trim();if(!n){toast('Staff ka naam likhein',true);return;}state.staff.push({name:n,job:$('#stJob').value.trim(),phone:$('#stPhone').value.trim(),salary:parseFloat($('#stSalary').value)||0,status:$('#stStatus').value});save();toast('Staff add ho gaya');render();});
  $$('#view-hr [data-delstaff]').forEach(function(b){b.addEventListener('click',function(){state.staff.splice(+b.getAttribute('data-delstaff'),1);save();render();});});
  $('#cashAdd').addEventListener('click',function(){var a=parseFloat($('#cashAmt').value)||0;if(a<=0){toast('Amount likhein',true);return;}state.cash.push({type:$('#cashType').value,amount:a,desc:$('#cashDesc').value.trim(),at:Date.now()});save();toast('Cash entry add ho gayi');render();});
- bindRooms('hr',renderHR);
+ bindRooms('hr',renderHR,$('#view-hr'));
 }
 
 /* ================= PROCUREMENT ================= */
@@ -727,7 +750,7 @@ function renderProcurement(){
  else h+='<div class="tblwrap card"><table class="tbl"><tr><th>Item</th><th>Category</th><th>Vendor</th><th>Amount</th><th>Date</th><th></th></tr>'+state.purchases.slice().reverse().map(function(p){var i=state.purchases.indexOf(p);return '<tr><td>'+esc(p.item)+'</td><td>'+esc(p.category)+'</td><td>'+esc(p.vendor)+'</td><td class="num">'+rs(p.amount)+'</td><td>'+esc(p.date||'')+'</td><td><button class="btn ghost sm" data-delpur="'+i+'">Delete</button></td></tr>';}).join('')+'</table></div>';
  h+='<div class="card" style="margin-top:12px"><h3 style="margin-top:0;color:var(--navy)">Purchase add karein</h3><div class="grid2"><div class="field"><label>Item</label><input class="inp" id="pItem" placeholder="e.g. Tamatar 10kg"></div><div class="field"><label>Category</label><select class="inp" id="pCat"><option>Vegetables</option><option>Meat</option><option>Grocery</option><option>Supplies</option><option>General</option></select></div><div class="field"><label>Vendor</label><input class="inp" id="pVendor" placeholder="Vendor / dukaan ka naam"></div><div class="field"><label>Amount (PKR)</label><input class="inp" type="number" min="0" id="pAmt" placeholder="2500"></div><div class="field"><label>Date</label><input class="inp" type="date" id="pDate"></div></div><button class="btn gold" id="pAdd">Purchase add karein</button></div>';
  $('#view-procurement').innerHTML=h;
- $('#pAdd').addEventListener('click',function(){var it=$('#pItem').value.trim();if(!it){toast('Item likhein',true);return;}state.purchases.push({item:it,category:$('#pCat').value,vendor:$('#pVendor').value.trim(),amount:parseFloat($('#pAmt').value)||0,date:$('#pDate').value});save();toast('Purchase add ho gayi');render();});
+ $('#pAdd').addEventListener('click',function(){var it=$('#pItem').value.trim();if(!it){toast('Item likhein',true);return;}state.purchases.push({id:newId('pur'),at:Date.now(),item:it,category:$('#pCat').value,vendor:$('#pVendor').value.trim(),amount:parseFloat($('#pAmt').value)||0,date:$('#pDate').value});save();toast('Purchase add ho gayi');render();});
  $$('#view-procurement [data-delpur]').forEach(function(b){b.addEventListener('click',function(){state.purchases.splice(+b.getAttribute('data-delpur'),1);save();render();});});
 }
 
@@ -742,9 +765,9 @@ function renderManage(){
 }
 
 /* ================= GUEST VIEW ================= */
-var guestCtx={tableId:null,cart:[],orderCode:null};
+var guestCtx={tableId:null,cart:[],orderCode:null,guestName:'',gType:'dine-in',_lastStatus:null};
 function openGuest(tid){
- guestCtx={tableId:tid,cart:[],orderCode:null};
+ guestCtx={tableId:tid,cart:[],orderCode:null,guestName:'',gType:'dine-in',_lastStatus:null};
  var existing=activeOrderFor(tid);if(existing)guestCtx.orderCode=existing.code;
  $('#frontDoor').style.display='none';$('#authView').style.display='none';$('#staffApp').style.display='none';$('#guestView').style.display='block';
  renderGuestView();window.scrollTo(0,0);
@@ -753,6 +776,7 @@ function closeGuest(){guestCtx.orderCode=null;showFront();}
 function renderGuestView(){
  var t=getTable(guestCtx.tableId);if(!t){showFront();return;}
  var o=guestCtx.orderCode?findOrder(guestCtx.orderCode):activeOrderFor(t.id);
+ guestCtx._lastStatus=o?o.status:null;
  var h='<div style="background:var(--navy);color:#fff;padding:22px 18px;border-radius:0 0 22px 22px"><div class="wrap" style="padding:0"><h2 style="margin:0;font-size:24px">Shizcon Restaurant</h2><p style="margin:2px 0 0;opacity:.85;font-weight:600">'+esc(t.name)+' · '+t.kind+' · '+t.seats+' seats — Guest Menu</p></div></div><div class="wrap" style="max-width:820px">';
  if(o){
   h+='<div class="card" style="margin-top:14px"><h3 style="margin-top:0;color:var(--navy)">Aap ka order #'+o.code+'</h3><p>'+statusPill(o)+(isLate(o)?' <span class="pill late">LATE</span>':'')+' <span class="note">· <span data-elapsed="'+o.code+'">'+fmtElapsed(Date.now()-o.placedAt)+'</span></span></p>'+itemsHtml(o)+billHtml(o);
@@ -764,19 +788,23 @@ function renderGuestView(){
   h+='</div>';
  }
  h+='<h3 class="serif" style="color:var(--navy)">Menu — order karein</h3>'
-  +'<div class="grid2" style="grid-template-columns:1fr"><div class="field"><label>Order type</label><select class="inp" id="gType"><option value="dine-in">Dine-in</option><option value="takeaway">Takeaway</option><option value="online">Online</option></select></div><div class="field"><label>Aap ka naam (optional)</label><input class="inp" id="gName" placeholder="Guest name"></div></div>'
+  +'<div class="grid2" style="grid-template-columns:1fr"><div class="field"><label>Order type</label><select class="inp" id="gType"><option value="dine-in"'+(guestCtx.gType==='dine-in'?' selected':'')+'>Dine-in</option><option value="takeaway"'+(guestCtx.gType==='takeaway'?' selected':'')+'>Takeaway</option><option value="online"'+(guestCtx.gType==='online'?' selected':'')+'>Online</option></select></div><div class="field"><label>Aap ka naam (optional)</label><input class="inp" id="gName" placeholder="Guest name" value="'+esc(guestCtx.guestName||'')+'"></div></div>'
   +'<div id="gPicker">'+menuPickerHtml('g',guestCtx.cart)+'</div>'
   +'<div class="card" style="margin-top:12px"><h3 style="margin-top:0;color:var(--navy)">Cart</h3><div id="gCart">'+cartHtml(guestCtx.cart,'g')+'</div><button class="btn green block" id="gPlace" style="margin-top:12px">Order lagayein → Kitchen</button></div>'
   +'<p style="text-align:center;margin-top:16px"><button class="btn ghost" onclick="return false" id="gBack">← QR Tables par wapas</button></p></div>';
  $('#guestView').innerHTML=h;
- bindPicker($('#guestView'),'g',guestCtx.cart,renderGuestView);
- $$('#guestView [data-g-rm]').forEach(function(b){b.addEventListener('click',function(){guestCtx.cart.splice(+b.getAttribute('data-g-rm'),1);renderGuestView();});});
+ /* Cart add/remove par naam aur order type snapshot — dobara render par guest ki detail gayab na ho.
+    Cart remove sirf bindPicker bind karta hai (dohri binding se aik click par 2 items delete ho jate thay). */
+ function gSnapshot(){var gn=$('#gName');if(gn)guestCtx.guestName=gn.value;var gt=$('#gType');if(gt)guestCtx.gType=gt.value;}
+ function gRender(){gSnapshot();renderGuestView();}
+ bindPicker($('#guestView'),'g',guestCtx.cart,gRender);
  $('#gBack').addEventListener('click',closeGuest);
  var place=$('#gPlace');
  if(place)place.addEventListener('click',function(){
+   gSnapshot();
    if(o&&o.status!=='paid'){toast('Is table par pehle se active order hai',true);return;}
    if(!guestCtx.cart.length){toast('Pehle items add karein',true);return;}
-   var no={code:state.seq++,tableId:t.id,guestName:$('#gName').value.trim(),waiter:'',orderType:$('#gType').value,items:guestCtx.cart.slice(),status:'new',placedAt:Date.now(),targetMins:null,prepStartedAt:null,lateNote:'',paidAt:null,paymentMethod:null,splitN:1,rating:null,reviewComment:''};
+   var no={code:state.seq++,tableId:t.id,guestName:(guestCtx.guestName||'').trim(),waiter:'',orderType:guestCtx.gType,items:guestCtx.cart.slice(),status:'new',placedAt:Date.now(),targetMins:null,prepStartedAt:null,lateNote:'',paidAt:null,paymentMethod:null,splitN:1,rating:null,reviewComment:''};
    state.orders.push(no);save();guestCtx.orderCode=no.code;guestCtx.cart=[];toast('Order #'+no.code+' kitchen mein bhej diya gaya');renderGuestView();
  });
  var rated=0;
@@ -789,6 +817,9 @@ function renderGuestView(){
 setInterval(function(){
  var c=$('#clock');if(c)c.textContent=new Date().toLocaleTimeString('en-PK',{hour:'numeric',minute:'2-digit'});
  $$('[data-elapsed]').forEach(function(el){var o=findOrder(+el.getAttribute('data-elapsed'));if(o)el.textContent=fmtElapsed(Date.now()-o.placedAt);});
+ /* Kitchen status badle to guest screen khud refresh ho — preparing/ready/paid guest ko wahin dikhe */
+ var gv=$('#guestView');
+ if(gv&&gv.style.display==='block'&&guestCtx.orderCode){var go=findOrder(guestCtx.orderCode);if(go&&go.status!==guestCtx._lastStatus){var gn=$('#gName');if(gn)guestCtx.guestName=gn.value;var gt=$('#gType');if(gt)guestCtx.gType=gt.value;renderGuestView();}}
 },1000);
 
 /* ================= INIT ================= */
