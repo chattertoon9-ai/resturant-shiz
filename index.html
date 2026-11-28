@@ -10,6 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <style>
 :root{
   --bg:#F1F3F7; --surface:#ffffff; --ink:#101828; --dim:#5B6577; --line:#D9DEE8;
@@ -453,6 +455,16 @@ button.role-card .rc-open{display:inline-block;margin-top:8px;font-weight:800;fo
 .owner-cta button.mgr{background:var(--pos-orange);border-color:var(--pos-orange-d)}
 .owner-cta .oc-t{display:block;font-size:28px;font-weight:800;letter-spacing:.01em}
 .owner-cta .oc-s{display:block;margin-top:7px;font-size:13px;font-weight:600;opacity:.85;line-height:1.45}
+/* Owner main page — sub-account CTA buttons (Manager, HR, Admin, Waiter, Cook, Procurement) */
+.sub-cta{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0 4px}
+@media(min-width:900px){.sub-cta{grid-template-columns:repeat(3,1fr)}}
+.sub-cta button{font:inherit;cursor:pointer;border-radius:16px;padding:18px 14px 15px;text-align:left;border:2px solid var(--navy);background:var(--navy);color:#fff;box-shadow:var(--shadow);display:flex;gap:11px;align-items:flex-start;width:100%}
+.sub-cta button:hover{filter:brightness(1.14)}
+.sub-cta button.alt{background:var(--pos-orange);border-color:var(--pos-orange-d)}
+.sub-cta button.grn{background:var(--green);border-color:var(--green)}
+.sub-cta .sc-av{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex:none}
+.sub-cta .sc-t{display:block;font-size:19px;font-weight:800;line-height:1.2}
+.sub-cta .sc-s{display:block;margin-top:3px;font-size:12px;font-weight:600;opacity:.88;line-height:1.4}
 /* HR page — upar teen CTA buttons: Create user / Profile Employee / Cash entry */
 .hr-cta{display:grid;grid-template-columns:1fr;gap:12px;margin:16px auto 8px;max-width:980px}
 @media(min-width:760px){.hr-cta{grid-template-columns:repeat(3,1fr)}}
@@ -564,6 +576,11 @@ button.role-card .rc-open{display:inline-block;margin-top:8px;font-weight:800;fo
   .split-box{max-width:none}
   .split-box h2{font-size:24px}
 }
+#syncBar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:1200;display:none;align-items:center;gap:8px;background:var(--navy);color:#fff;font-size:13px;font-weight:700;padding:9px 16px;border-radius:999px;box-shadow:var(--shadow);max-width:92vw;text-align:center;pointer-events:none}
+#syncBar.show{display:inline-flex}
+#syncBar .syncdot{width:9px;height:9px;border-radius:50%;background:var(--gold);flex:none}
+#syncBar.online .syncdot{background:#2FBF71}
+@media (max-width:480px){#syncBar{font-size:12px;padding:8px 12px;bottom:10px;max-width:86vw}}
 </style>
 </head>
 <body>
@@ -579,7 +596,7 @@ button.role-card .rc-open{display:inline-block;margin-top:8px;font-weight:800;fo
     <button class="btn orange" id="staffLoginBtn">Staff Login →</button>
   </div></div>
   <div class="wrap">
-    <div class="demo-note" data-i18n="demoNote">Demo note: Ye per-visitor demo hai — aap ke orders aur data sirf aap ke apne browser (localStorage) mein rehte hain, doosre visitors ke saath share NAHI hote. Koi real multi-user login ya kitchen sync nahi hai. Browser data clear karne se sab reset ho jata hai.</div>
+    <div class="demo-note" data-i18n="demoNote">Demo note: Orders aur business data ab Firebase se sab devices par real-time sync hota hai — guest aik phone se order kare to waiter doosre phone par foran dekhega. Login sirf is device par rehta hai; internet na ho to aakhri cached data dikhta hai aur connection aate hi sync ho jata hai.</div>
 
     <h1 style="text-align:center;font-size:38px;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,.6);margin:18px 0 4px">QR Tables</h1>
     <p style="text-align:center;color:#F3E9D7;text-shadow:0 1px 8px rgba(0,0,0,.65);font-weight:600;margin:0 0 16px" data-i18n="subtitle">Scan the QR on your table — the menu opens right away, no app or login needed.</p>
@@ -634,11 +651,11 @@ button.role-card .rc-open{display:inline-block;margin-top:8px;font-weight:800;fo
       <div class="auth-backrow"><button class="btn ghost sm" id="authBack">← QR Tables</button></div>
       <h2>Staff Login</h2>
       <p class="note">Har role ka apna account hai — <b>har waiter ka bhi apna alag account</b> hai. Login ke liye apna username, role aur <b>password</b> likhein — sahi password par hi login hoga.</p>
-      <div class="demo-note">Demo note: Accounts aur data sirf is browser ke localStorage mein hain — koi server login nahi hai.</div>
+      <div class="demo-note">Demo note: Login session sirf is device par rehta hai — lekin orders aur business data Firebase se sab devices par real-time sync hota hai.</div>
       <div class="demo-note" id="authSetupNote" style="display:none">First-run setup: Is browser mein abhi kisi account ka password set nahi hai. Neeche apna <b>Owner</b> username aur password bana lein — password sirf is browser mein mehfooz hash ki surat mein save hoga. Baaki staff accounts Owner andar ja kar banayega.</div>
       <div class="seg" style="margin-bottom:14px" id="authTabs"><button id="tabLogin" class="on">Login</button><button id="tabSignup">Sign up</button></div>
       <div class="err-box" id="authErr"></div>
-      <div class="field"><label>Username</label><input class="inp" id="authUser" autocomplete="username" /></div>
+      <div class="field"><label>Username</label><input class="inp" id="authUser" autocomplete="username" placeholder="Apna username likhein" aria-label="Username" /></div>
       <div class="field"><label>Password</label><input class="inp" type="password" id="authPass" autocomplete="current-password" placeholder="Account ka password likhein" /></div>
       <div class="field"><label>Role</label><select class="inp" id="authRole"></select></div>
       <button class="btn gold block" id="authSubmit">Login →</button>
@@ -682,6 +699,7 @@ button.role-card .rc-open{display:inline-block;margin-top:8px;font-weight:800;fo
 <div id="submitAlert" role="alert" aria-live="assertive"></div>
 <button id="soundToggle" aria-label="Submit alert ki ring on ya off karein"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span id="soundToggleTxt">Ring: ON</span></button>
 <div id="toast" role="status"></div>
+<div id="syncBar" role="status"><span class="syncdot"></span><span id="syncBarTxt">Offline — cached data dikh raha hai</span></div>
 <div id="printQRs"></div>
 <div id="printBill"></div>
 
@@ -791,10 +809,13 @@ function rightLabel(k){for(var i=0;i<RIGHT_DEFS.length;i++)if(RIGHT_DEFS[i].k===
 var TAX=5, LS_KEY='shizcon_restaurant_v7';
 
 /* ================= STATE (localStorage) ================= */
-/* Passwords: is source mein koi seeded password ya password hash NAHI hai.
-   Pehli dafa (first-run) Owner apna account khud banata hai; har password sirf
-   is browser mein PBKDF2 (WebCrypto, per-password random salt, 120,000 iterations)
-   hash ki surat mein save hota hai — plaintext kabhi store ya render nahi hota. */
+/* Passwords: shipped source mein KOI password nahi hai. Seeded accounts (SEED_USERS) sirf
+   username + role ke saath aate hain — un ka koi password pehle se set nahi hota. Har password
+   first-run setup / sign-up / Owner ya HR ke zariye user khud set karta hai aur sirf is browser
+   mein PBKDF2 (WebCrypto, per-password random salt, 120,000 iterations) hash ki surat mein save
+   hota hai. First-run setup tab aata hai jab kisi bhi account ke paas pwHash na ho. Purani
+   state mein agar kisi account par plaintext 'pass' reh gaya ho to woh load par strip ho jata
+   hai — aise account ka password Owner User Management se dobara set karna hota hai. */
 function bufToHex(buf){var b=new Uint8Array(buf),s='';for(var i=0;i<b.length;i++)s+=('0'+b[i].toString(16)).slice(-2);return s;}
 function hexToBuf(hex){var b=new Uint8Array(Math.floor(hex.length/2));for(var i=0;i<b.length;i++)b[i]=parseInt(hex.substr(i*2,2),16);return b;}
 function pwRecord(pw){
@@ -812,6 +833,7 @@ function pwVerify(pw,u){
   .catch(function(){return false;});
 }
 function hasAnyCredentials(){return (typeof state!=='undefined'&&state&&state.users||[]).some(function(u){return !!u.pwHash;});}
+var SEED_USERS=[{username:'admin',role:'Owner'},{username:'manager',role:'Manager'},{username:'cook',role:'Cook'},{username:'hr',role:'HR'},{username:'counter',role:'Counter'},{username:'procurement',role:'Procurement'},{username:'ahmed',role:'Waiter'},{username:'bilal',role:'Waiter'},{username:'usman',role:'Waiter'}];
 var SEED_WAITERS=[{name:'Ahmed Raza',phone:'0301-2345678',username:'ahmed'},{name:'Bilal Hussain',phone:'0321-9876543',username:'bilal'},{name:'Usman Tariq',phone:'0333-5551234',username:'usman'}];
 /* Demo employees — har aik ki poori profile: detail + advances[] + salaryPayments[] */
 function seedStaff(){
@@ -843,10 +865,13 @@ if(!state.reservations) state.reservations=[];
 if(!state.accounts) state.accounts=[];
 if(!state.acctSeq) state.acctSeq=5001;
 /* Har role — khaas taur par har waiter — ka apna account: purani saved state mein missing seeded accounts/waiters add kar do */
-/* Credential safai: purani saved state ke plaintext / kamzor-hash credential fields hata do —
-   pehle publish hue demo passwords compromised samjhe jate hain, is liye koi purana password
-   carry-forward nahi hota. Kisi bhi account ka password na ho to first-run setup / Owner reset se set hoga. */
-state.users.forEach(function(u){delete u.pass;delete u.passHash;});
+/* Seeded accounts restore: Owner ka apna alag account (admin) aur har role ka apna account —
+   sirf username + role, KOI password nahi. Missing seeded account add hota hai; passwords sirf
+   setup / sign-up / Owner ke set kiye hue PBKDF2 hash (pwHash) se aate hain. Purani state mein
+   reh gaya koi bhi plaintext 'pass' field yahan strip ho jata hai — user ke banaye hue accounts
+   aur un ke pwHash bilkul waisay hi rehte hain. */
+SEED_USERS.forEach(function(su){if(!state.users.some(function(u){return u.username===su.username;}))state.users.push({username:su.username,role:su.role});});
+state.users.forEach(function(u){if('pass' in u)delete u.pass;});
 if(!state.waiters)state.waiters=[];
 SEED_WAITERS.forEach(function(sw){if(!state.waiters.some(function(w){return w.username===sw.username;}))state.waiters.push({name:sw.name,phone:sw.phone,username:sw.username});});
 /* Role ke purane naam -> naye alag sections: 'HR & Admin' / 'Admin and HR' -> 'HR' (saved accounts kharab na hon) */
@@ -856,7 +881,15 @@ state.users.forEach(function(u){if(u.role==='HR & Admin'||u.role==='Admin and HR
 if(!state.staff)state.staff=[];
 state.staff.forEach(function(s){if(!s.id)s.id=newId('emp');if(typeof s.joining==='undefined')s.joining='';if(!s.advances)s.advances=[];if(!s.salaryPayments)s.salaryPayments=[];});
 if(!state.staffSeeded){if(!state.staff.length)state.staff=seedStaff();state.staffSeeded=true;}
-/* Migration ke baad state foran wapas likh do — browser storage mein bhi koi plaintext password baqi na rahe */
+/* Cleanup migration: purani buggy version ke stale Rs 0 / blank-date wale records har load par hata do.
+   Purchases: amount 0, missing ya NaN amount, ya blank/missing date wala entry remove.
+   Rooms: rate 0, total 0 ya missing rate wali booking remove.
+   Valid records bilkul untouched; orders, users, staff, waiters, reservations, cash, reqs aur menu items ko haath nahi. */
+if(!state.purchases)state.purchases=[];
+state.purchases=state.purchases.filter(function(p){if(!p)return false;var amt=Number(p.amount);if(isNaN(amt)||amt===0)return false;if(!p.date||!String(p.date).trim())return false;return true;});
+if(!state.rooms)state.rooms=[];
+state.rooms=state.rooms.filter(function(r){if(!r)return false;if(typeof r.rate==='undefined'||r.rate===null||r.rate==='')return false;if((+r.rate||0)===0)return false;if((+r.total||0)===0)return false;return true;});
+/* Migration ke baad state foran wapas likh do — restored seeded accounts aur saaf kiye gaye records storage mein bhi save ho jayein */
 try{localStorage.setItem(LS_KEY,JSON.stringify(state));}catch(e){}
 function newId(p){return p+'-'+Date.now()+'-'+Math.floor(Math.random()*1000000);}
 function syncLedger(){
@@ -877,9 +910,110 @@ function syncLedger(){
  if(payroll>0)derived.push({type:'OUT',amount:payroll,desc:'Monthly payroll · active staff ('+activeStaff.length+')',at:(oldByRef['payroll:monthly']?oldByRef['payroll:monthly'].at:Date.now()),ref:'payroll:monthly',auto:true});
  state.cash=state.cash.filter(function(c){return c&&!c.auto&&!c.ref;}).concat(derived);
 }
-function save(){ syncLedger(); try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){} }
+function save(){ syncLedger(); try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){} fbPush(); }
+
+/* ================= FIREBASE SYNC (Realtime Database) =================
+   Shared business data /shizcon-restaurant/ path par sab devices ke darmiyan real-time
+   sync hota hai: orders, rooms, reservations, staff, waiters, purchases, reqs, cash,
+   guest accounts, menu items aur counters (seq/acctSeq). Tables code mein fixed
+   definitions hain (har device par same) — un ki live status inhi synced orders se banti hai.
+   Users/passwords, login session aur Back history sirf is device par rehte hain (localStorage).
+   localStorage hamesha aakhri synced data ka cache bhi hai: Firebase na mile to app cache
+   se khulta hai + offline notice dikhta hai — blank screen ya crash kabhi nahi. */
+var FB_CONFIG={apiKey:"AIzaSyBjZc98XP_kCapfUJzwi5BjcgABjgwLc2c",authDomain:"shizcon-restaurant.firebaseapp.com",databaseURL:"https://shizcon-restaurant-default-rtdb.firebaseio.com",projectId:"shizcon-restaurant",storageBucket:"shizcon-restaurant.firebasestorage.app",messagingSenderId:"977400389396",appId:"1:977400389396:web:fef3e3c38a1d3063a16c01"};
+var FB_PATH='shizcon-restaurant';
+var FB_SHARED=['orders','rooms','reservations','staff','staffSeeded','waiters','purchases','reqs','cash','accounts','seq','acctSeq','menuItems'];
+var fbDb=null,fbRef=null,fbOnline=false,fbEverOnline=false,fbPushTimer=null,fbLastJson='',fbBarTimer=null;
+function fbSharedOf(st){var o={};FB_SHARED.forEach(function(k){var v=st?st[k]:undefined;o[k]=(typeof v==='undefined')?null:v;});return o;}
+function fbCacheWrite(){try{localStorage.setItem(LS_KEY,JSON.stringify(state));}catch(e){}}
+function fbSetBar(mode,txt){var b=document.getElementById('syncBar');if(!b)return;if(mode==='hide'){b.className='';return;}b.className='show'+(mode==='online'?' online':'');var t=document.getElementById('syncBarTxt');if(t&&txt)t.textContent=txt;}
+function fbShowOffline(){clearTimeout(fbBarTimer);fbSetBar('offline','Offline — cached data dikh raha hai');}
+function fbShowOnline(){fbSetBar('online','Online — sab devices se sync ho gaya');clearTimeout(fbBarTimer);fbBarTimer=setTimeout(function(){fbSetBar('hide');},3000);}
+function fbPush(){
+ if(!fbRef)return;
+ clearTimeout(fbPushTimer);
+ fbPushTimer=setTimeout(function(){
+  if(!fbRef)return;
+  try{
+   var j=JSON.stringify(fbSharedOf(state));
+   if(j===fbLastJson)return;
+   fbLastJson=j;
+   fbRef.update(JSON.parse(j));
+  }catch(e){}
+ },250);
+}
+function fbPushNow(){
+ if(!fbRef)return;
+ try{var j=JSON.stringify(fbSharedOf(state));fbLastJson=j;fbRef.update(JSON.parse(j));}catch(e){}
+}
+function fbNormalizeShared(s){
+ /* Firebase khaali arrays ko null/absent bana deta hai — wapas proper arrays banao */
+ ['orders','rooms','reservations','staff','waiters','purchases','reqs','cash','accounts','menuItems'].forEach(function(k){if(!Array.isArray(s[k]))s[k]=[];});
+ if(!s.seq)s.seq=1001;
+ if(!s.acctSeq)s.acctSeq=5001;
+ s.staff.forEach(function(x){if(x){if(!x.advances)x.advances=[];if(!x.salaryPayments)x.salaryPayments=[];}});
+ s.orders.forEach(function(o){if(o){if(!o.items)o.items=[];if(!o.requests)o.requests=[];}});
+ return s;
+}
+function fbOnValue(snap){
+ var val=snap?snap.val():null;
+ if(!val){fbPushNow();return;} /* Database abhi khaali hai — is device ka saaf kiya hua data seed kar do */
+ var shared={};
+ FB_SHARED.forEach(function(k){shared[k]=(typeof val[k]==='undefined')?undefined:val[k];});
+ fbNormalizeShared(shared);
+ var j=JSON.stringify(fbSharedOf(shared));
+ if(j===fbLastJson)return; /* Apna hi push wapas aaya hai — kuch na karo */
+ fbLastJson=j;
+ var merged={};
+ for(var k1 in state)merged[k1]=state[k1];
+ FB_SHARED.forEach(function(k){merged[k]=shared[k];});
+ if(!merged.menuItems||!merged.menuItems.length)merged.menuItems=JSON.parse(JSON.stringify(DEFAULT_MENU));
+ onExternalState(merged);
+}
+function fbInit(){
+ try{
+  if(typeof firebase==='undefined'||!firebase.database)throw new Error('Firebase SDK unavailable');
+  if(!firebase.apps||!firebase.apps.length)firebase.initializeApp(FB_CONFIG);
+  fbDb=firebase.database();
+  fbRef=fbDb.ref(FB_PATH);
+  fbDb.ref('.info/connected').on('value',function(s){
+   if(s.val()===true){
+    fbOnline=true;
+    if(!fbEverOnline){fbEverOnline=true;fbSetBar('hide');}
+    else fbShowOnline();
+    fbPush();
+   }else{
+    fbOnline=false;
+    fbShowOffline();
+   }
+  });
+  fbRef.on('value',fbOnValue,function(){fbOnline=false;fbShowOffline();});
+ }catch(e){
+  fbOnline=false;
+  fbShowOffline();
+ }
+ /* Connection dair se aaye ya bilkul na aaye — offline notice lazmi dikhe, app cache se chalta rahe */
+ setTimeout(function(){if(!fbOnline)fbShowOffline();},8000);
+}
 var session={user:null,role:null};
 var currentTab='roles';
+
+/* ================= VIEW HISTORY (Back = sirf aik step peeche) =================
+   Session-only stack — localStorage mein save NAHI hota. Har navigation se pehle
+   current screen ka snapshot push hota hai; Back button sirf wohi snapshot restore
+   karta hai. Back kabhi logout NAHI karta aur showAuth() kabhi call NAHI hota —
+   logout sirf Logout button (#logoutBtn) se hota hai. */
+var navHistory=[];
+function screenSnap(){return {tab:currentTab,ownerMode:ownerMode,ownerUsersOpen:ownerUsersOpen,hrMode:hrMode,counterTableOpen:counterTableOpen,counterSel:counterSel,counterTab:counterTab,counterPosTab:counterPosTab};}
+function pushHistory(){var s=screenSnap();var top=navHistory[navHistory.length-1];if(top&&JSON.stringify(top)===JSON.stringify(s))return;navHistory.push(s);if(navHistory.length>80)navHistory.shift();}
+function navBack(){
+ if(!navHistory.length){toast('Pehle se main page par hain');return;}
+ var s=navHistory.pop();
+ currentTab=s.tab;ownerMode=s.ownerMode;ownerUsersOpen=s.ownerUsersOpen;hrMode=s.hrMode;counterTableOpen=s.counterTableOpen;counterSel=s.counterSel;counterTab=s.counterTab;counterPosTab=s.counterPosTab;
+ $$('.view').forEach(function(v){v.classList.remove('active');});
+ var el=$('#view-'+currentTab);if(el)el.classList.add('active');
+ renderNav();render();window.scrollTo(0,0);
+}
 
 /* ================= HELPERS ================= */
 function $(s,r){return (r||document).querySelector(s);}
@@ -958,14 +1092,23 @@ if(stBtn)stBtn.addEventListener('click',function(){
  if(soundOn){submitAlert('Sound','Ring ON kar di gayi','Ab har submit par alert aayega aur ghanti bajegi.',1);}
  else{var el=$('#submitAlert');if(el)el.classList.remove('show');toast('Ring OFF — alert banner aayega, awaz nahi');}
 });
-/* Doosri tab/screen ka submit: localStorage badle to state reload + ring + alert */
-window.addEventListener('storage',function(e){
- if(e.key!==LS_KEY||!e.newValue)return;
+/* Doosri tab/screen (storage event) ya doosre device (Firebase) ka submit:
+   naya state apply + wahi cleanup migration + cache update + ring + alert */
+function onExternalState(ns){
+ if(!ns||!ns.orders)return;
  var prevStatus={},prevReqN=(state.reqs||[]).length,prevGuestReq={};
  state.orders.forEach(function(o){prevStatus[o.code]=o.status;prevGuestReq[o.code]=(o.requests||[]).length;});
- var ns=null;try{ns=JSON.parse(e.newValue);}catch(err){return;}
- if(!ns||!ns.orders)return;
  state=ns;
+ /* Synced data par bhi wahi cleanup migration jo load par chalti hai — gande records
+    (Rs 0 / blank-date purchases, Rs 0 rooms) hatao, cache update karo, aur agar kuch
+    saaf hua ho to cleaned state Firebase par wapas likh do taake sab devices saaf hon */
+ var clBefore=JSON.stringify([state.purchases||[],state.rooms||[]]);
+ if(!state.purchases)state.purchases=[];
+ state.purchases=state.purchases.filter(function(p){if(!p)return false;var amt=Number(p.amount);if(isNaN(amt)||amt===0)return false;if(!p.date||!String(p.date).trim())return false;return true;});
+ if(!state.rooms)state.rooms=[];
+ state.rooms=state.rooms.filter(function(r){if(!r)return false;if(typeof r.rate==='undefined'||r.rate===null||r.rate==='')return false;if((+r.rate||0)===0)return false;if((+r.total||0)===0)return false;return true;});
+ fbCacheWrite();
+ if(JSON.stringify([state.purchases,state.rooms])!==clBefore)fbPush();
  var msgs=[];
  state.orders.forEach(function(o){
   var t=getTable(o.tableId),tn=t?t.name:o.tableId,prev=prevStatus[o.code];
@@ -990,15 +1133,20 @@ window.addEventListener('storage',function(e){
  if(session.role){render();renderNav();}
  else if($('#guestView').style.display==='block'){renderGuestView();}
  else{renderCarousel();}
+}
+window.addEventListener('storage',function(e){
+ if(e.key!==LS_KEY||!e.newValue)return;
+ var ns=null;try{ns=JSON.parse(e.newValue);}catch(err){return;}
+ onExternalState(ns);
 });
 
 /* ================= I18N (front door) ================= */
 var I18N={
- ur:{demoNote:'Demo note: Ye per-visitor demo hai — aap ke orders aur data sirf aap ke apne browser (localStorage) mein rehte hain, doosre visitors ke saath share NAHI hote. Koi real multi-user login ya kitchen sync nahi hai. Browser data clear karne se sab reset ho jata hai.',
+ ur:{demoNote:'Demo note: Orders aur business data ab Firebase se sab devices par real-time sync hota hai — guest aik phone se order kare to waiter doosre phone par foran dekhega. Login sirf is device par rehta hai; internet na ho to aakhri cached data dikhta hai aur connection aate hi sync ho jata hai.',
   subtitle:'Apni table par laga QR scan karein — menu foran khul jayega, koi app ya login nahi chahiye.',
   hint:'Camera is code ki taraf karein — is table ka menu khul jayega',openMenu:"Is table ka menu kholein →",prev:'Previous',next:'Next',
   tablesHead:'Tables & Lounge',printHead:'Table QR Sheet',printSub:'Sab tables ke QR aik sheet mein — print karne ke liye apne browser ya phone ke menu se Print choose karein, har table ka QR alag page par aayega.',printBtn:'QR sheet kholein'},
- en:{demoNote:'Demo note: This is a per-visitor demo — your orders and data live only in your own browser (localStorage) and are NOT shared with other visitors. There is no real multi-user login or kitchen sync. Data resets when you clear browser data.',
+ en:{demoNote:'Demo note: Orders and business data now sync in real time across devices via Firebase — a guest order placed on one phone appears on the waiter\u2019s phone right away. Login stays on this device; if the internet is down, the last cached data is shown and sync resumes when the connection returns.',
   subtitle:'Scan the QR on your table — the menu opens right away, no app or login needed.',
   hint:"Point your camera at the code to open this table's menu",openMenu:"Open this table's menu →",prev:'Previous',next:'Next',
   tablesHead:'Tables & Lounge',printHead:'Table QR Sheet',printSub:'All table QRs on one sheet — to print, choose Print from your browser or phone menu; each table QR comes on its own page.',printBtn:'Open QR sheet'}
@@ -1073,7 +1221,7 @@ $('#authSubmit').addEventListener('click',function(){
  function fail(msg){err.textContent=msg;err.style.display='block';}
  if(!u){fail('Username likhein.');return;}
  if(isSetupMode()){
-   /* First-run setup: koi seeded password nahi — Owner apna password khud banata hai (sirf hash save hota hai) */
+   /* First-run setup: sirf tab jab kisi bhi account ke paas koi credential na ho — Owner apna password khud banata hai (sirf hash save hota hai). Seeded account ka password setup se kabhi overwrite nahi hota. */
    if(!pw){fail('Password set karein — Owner account ke liye password lazmi hai.');return;}
    var ex=null;for(var i0=0;i0<state.users.length;i0++)if(state.users[i0].username.toLowerCase()===u.toLowerCase())ex=state.users[i0];
    if(ex&&ex.pwHash){fail('Is account ka password pehle se set hai — login karein.');return;}
@@ -1100,14 +1248,18 @@ $('#authSubmit').addEventListener('click',function(){
    if(!found){fail('Ye username maujood nahi hai — pehle Sign up karein.');return;}
    if(found.role!==r){fail('Is account ka role "'+found.role+'" hai — role select mein wohi choose karein.');return;}
    if(!pw){fail('Password likhein.');return;}
-   if(!found.pwHash){fail('Is account ka password abhi set nahi hai — Owner se password set karwayein.');return;}
-   pwVerify(pw,found).then(function(ok){
-     if(!ok){fail('Password ghalat hai — sahi password likh kar dobara try karein.');return;}
-     startSession(found.username,found.role);toast('Welcome, '+found.username+'!');
-   });
+   if(found.pwHash){
+     /* User ka khud set kiya hua password — PBKDF2 hash se verify hota hai */
+     pwVerify(pw,found).then(function(ok){
+       if(!ok){fail('Password ghalat hai — sahi password likh kar dobara try karein.');return;}
+       startSession(found.username,found.role);toast('Welcome, '+found.username+'!');
+     });
+     return;
+   }
+   fail('Is account ka password abhi set nahi hai — Owner se password set karwayein.');return;
  }
 });
-function startSession(u,r){var nm=accountName({username:u,role:r});session={user:u,role:r,name:nm};$('#authView').style.display='none';$('#frontDoor').style.display='none';$('#staffApp').style.display='block';$('#userPill').textContent=nm+' · '+r+' (@'+u+')';$('#toFrontBtn').style.display=(effectiveTabs().length<=1)?'none':'';if(r==='Waiter')formState.waiter=nm;goTab(landingForCurrent());}
+function startSession(u,r){var nm=accountName({username:u,role:r});session={user:u,role:r,name:nm};$('#authView').style.display='none';$('#frontDoor').style.display='none';$('#staffApp').style.display='block';$('#userPill').textContent=nm+' · '+r+' (@'+u+')';$('#toFrontBtn').style.display=(effectiveTabs().length<=1)?'none':'';if(r==='Waiter')formState.waiter=nm;goTab(landingForCurrent());navHistory.length=0;}
 $('#logoutBtn').addEventListener('click',function(){session={user:null,role:null};showAuth();toast('Logout ho gaya');});
 $('#toFrontBtn').addEventListener('click',function(){showFront();});
 
@@ -1118,9 +1270,9 @@ function renderNav(){
  /* Header ke neeche wali chhoti role tabs (Waiter, Counter, Kitchen waghera) hata di gayi hain —
     har role seedha apne landing page par khulta hai, koi tab row nahi dikhti. */
 }
-function goTab(id){if(effectiveTabs().indexOf(id)<0)id=landingForCurrent();currentTab=id;$$('.view').forEach(function(v){v.classList.remove('active');});var el=$('#view-'+id);if(el)el.classList.add('active');renderNav();render();window.scrollTo(0,0);}
-function mainBackHtml(){return '<button class="btn orange" data-mainback style="margin:0 0 12px">\u2190 Back \u2014 Login</button>';}
-function bindMainBack(root){if(!root)return;var b=root.querySelector('[data-mainback]');if(b)b.addEventListener('click',function(){session={user:null,role:null};showAuth();toast('Login screen par wapas aa gaye');});}
+function goTab(id){if(effectiveTabs().indexOf(id)<0)id=landingForCurrent();if(id!==currentTab)pushHistory();currentTab=id;$$('.view').forEach(function(v){v.classList.remove('active');});var el=$('#view-'+id);if(el)el.classList.add('active');renderNav();render();window.scrollTo(0,0);}
+function mainBackHtml(){return '<button class="btn orange" data-mainback style="margin:0 0 12px">\u2190 Back</button>';}
+function bindMainBack(root){if(!root)return;var b=root.querySelector('[data-mainback]');if(b)b.addEventListener('click',function(){navBack();});}
 function render(){
  if(!session.role)return;
  ({roles:renderRoles,home:renderHome,menu:renderMenuTab,kitchen:renderKitchen,waiter:renderWaiter,guests:renderGuests,counter:renderCounter,rooms:renderRoomsTab,ops:renderOps,owner:renderOwner,hr:renderHR,procurement:renderProcurement,manage:renderManage}[currentTab]||renderRoles)();
@@ -1251,6 +1403,7 @@ function execDashboardHtml(){
 
 /* ================= ROLES HOME ================= */
 function renderRoles(){
+ if(session&&session.role==='Owner'){renderOwnerHome();return;}
  var h=mainBackHtml()+'<h2 class="serif" style="color:var(--navy);margin:6px 0 2px">Role Home</h2><p class="sub note" style="margin:0 0 14px">Aap <b>'+esc(session.name||session.user)+'</b> (@'+esc(session.user)+') — role <b>'+esc(session.role)+'</b>. '+esc(ROLES[session.role].desc)+'</p>';
  h+='<div class="stats"><div class="stat hero"><div class="k">Aaj ki kamai</div><div class="v num">'+rs(todayEarnings())+'</div></div><div class="stat"><div class="k">Active orders</div><div class="v num">'+activeOrders().length+'</div></div><div class="stat"><div class="k">Paid orders</div><div class="v num">'+paidOrders().length+'</div></div><div class="stat"><div class="k">Tables</div><div class="v num">'+TABLES.length+'</div></div></div>';
  var myR=rightsOfSession();
@@ -2094,11 +2247,11 @@ function renderCounter(){
  }
  $('#view-counter').innerHTML=h;bindMainBack($('#view-counter'));
  bindRequestDone($('#view-counter'),renderCounter);
- $$('#view-counter [data-ctab]').forEach(function(b){b.addEventListener('click',function(){counterTab=b.getAttribute('data-ctab');renderCounter();window.scrollTo(0,0);});});
+ $$('#view-counter [data-ctab]').forEach(function(b){b.addEventListener('click',function(){pushHistory();counterTab=b.getAttribute('data-ctab');renderCounter();window.scrollTo(0,0);});});
  if(counterTab==='reserv'){bindReservations(renderCounter);return;}
  if(counterTab==='rooms'){bindRooms('ct',renderCounter,$('#view-counter'));return;}
  /* POS tabs (Counter Check ke andar) */
- $$('#view-counter [data-postab]').forEach(function(b){b.addEventListener('click',function(){counterPosTab=b.getAttribute('data-postab');renderCounter();});});
+ $$('#view-counter [data-postab]').forEach(function(b){b.addEventListener('click',function(){pushHistory();counterPosTab=b.getAttribute('data-postab');renderCounter();});});
  $$('#view-counter [data-cpay]').forEach(function(b){b.addEventListener('click',function(){openPaySheet(+b.getAttribute('data-cpay'));});});
  if(counterPosTab==='takeaway'){
   /* Menu cart — type/guest snapshot (cart add/remove par form dobara banta hai) */
@@ -2121,13 +2274,13 @@ function renderCounter(){
  }
  if(counterPosTab==='dinein'&&!counterTableOpen){
   $$('#view-counter [data-tvfilter]').forEach(function(b){b.addEventListener('click',function(){dineinFilter=b.getAttribute('data-tvfilter');renderCounter();});});
-  $$('#view-counter [data-tvtable]').forEach(function(b){b.addEventListener('click',function(){counterSel=b.getAttribute('data-tvtable');counterTableOpen=true;renderCounter();window.scrollTo(0,0);});});
-  $$('#view-counter [data-tvclose]').forEach(function(b){b.addEventListener('click',function(){counterTableOpen=true;renderCounter();window.scrollTo(0,0);});});
+  $$('#view-counter [data-tvtable]').forEach(function(b){b.addEventListener('click',function(){pushHistory();counterSel=b.getAttribute('data-tvtable');counterTableOpen=true;renderCounter();window.scrollTo(0,0);});});
+  $$('#view-counter [data-tvclose]').forEach(function(b){b.addEventListener('click',function(){pushHistory();counterTableOpen=true;renderCounter();window.scrollTo(0,0);});});
   return;
  }
  var qrEl=$('[data-cqr2="'+selT.id+'"]');if(qrEl)makeQR(qrEl,tableUrl(selT.id),120);
- $$('#view-counter [data-tvback]').forEach(function(b){b.addEventListener('click',function(){counterTableOpen=false;renderCounter();window.scrollTo(0,0);});});
- $$('#view-counter [data-ctable]').forEach(function(b){b.addEventListener('click',function(){counterSel=b.getAttribute('data-ctable');renderCounter();});});
+ $$('#view-counter [data-tvback]').forEach(function(b){b.addEventListener('click',function(){navBack();});});
+ $$('#view-counter [data-ctable]').forEach(function(b){b.addEventListener('click',function(){pushHistory();counterSel=b.getAttribute('data-ctable');renderCounter();});});
  $$('#view-counter [data-cbillpop]').forEach(function(b){b.addEventListener('click',function(){openCounterBillPopup(b.getAttribute('data-cbillpop'));});});
  $$('#view-counter [data-cedit]').forEach(function(b){b.addEventListener('click',function(){openEditOrder(+b.getAttribute('data-cedit'));});});
  /* Billing footer buttons */
@@ -2136,7 +2289,7 @@ function renderCounter(){
  $$('#view-counter [data-bf-transfer]').forEach(function(b){b.addEventListener('click',function(){if(selO)openTransferTable(selO);});});
  $$('#view-counter [data-bf-print]').forEach(function(b){b.addEventListener('click',function(){if(selO)printOrderBill(selO);});});
  $$('#view-counter [data-bf-cancel]').forEach(function(b){b.addEventListener('click',function(){if(!selO)return;var code=selO.code;state.orders=state.orders.filter(function(x){return !(x.tableId===counterSel&&x.status!=='paid');});save();submitAlert('Counter — Cancel','Order #'+code+' cancel ho gaya',selT.name+' ke saare unpaid orders cancel kar diye gaye hain — table free hai.',2);toast('Order #'+code+' cancel — table free hai');renderCounter();});});
- $$('#view-counter [data-bf-close]').forEach(function(b){b.addEventListener('click',function(){counterTableOpen=false;renderCounter();window.scrollTo(0,0);});});
+ $$('#view-counter [data-bf-close]').forEach(function(b){b.addEventListener('click',function(){pushHistory();counterTableOpen=false;renderCounter();window.scrollTo(0,0);});});
  function afterLineChange(o){
    if(!o.items.length){state.orders=state.orders.filter(function(x){return x!==o;});toast('Order khatam ho gaya — table free hai');}
    save();renderCounter();
@@ -2157,14 +2310,10 @@ function renderCounter(){
 }
 
 /* ================= OWNER (alag section) =================
-   Owner page khulte hi center mein do bade CTA buttons: Owner aur Manager.
-   Owner button -> Owner Dashboard, is tartib se:
-     1) Upar Graph (revenue vs expense, 7 din) + Profit & Loss detail + date-wise SHEET
-     2) Sab ke Counters (summary cards)
-     3) Admin aur Procurement ki detail
-     4) HR Salary aur Expense ki detail
-     5) User Area — click par User Management (create / edit user + Owner rights deta hai)
-   Manager button -> Manager Dashboard (maujooda Executive Dashboard).
+   Owner page par sab sub-accounts (Manager, HR, Admin, Waiter, Cook, Procurement) ke CTA
+   buttons hain — tap par woh section khul jata hai (Manager -> Manager Dashboard).
+   Owner ka main page sirf: Summary, Graphs, Profit & Loss + date-wise SHEET, Expense Detail,
+   Purchasing Detail aur User Rights dene ka profile (User Management).
    Saare figures app ke asal data se: revenue = paid orders ka total;
    expense = procurement purchases + paid salaries (net) + advances. Data na ho to 0. */
 var ownerMode='main';
@@ -2212,82 +2361,145 @@ function plSheetHtml(){
  return '<div class="tblwrap card"><table class="tbl"><tr><th>Date</th><th>Revenue</th><th>Expense</th><th>Profit / Loss</th></tr>'+rows
   +'<tr style="background:var(--pos-panel)"><td><b>Kul (ye dates)</b></td><td class="num"><b>'+rs(tr)+'</b></td><td class="num"><b>'+rs(te)+'</b></td><td class="num"><b>'+rs(tr-te)+'</b></td></tr></table></div>';
 }
-function ownerDashHtml(){
+
+/* ================= OWNER MAIN PAGE — sub-account CTAs + sirf Summary / P&L / Expense / Purchasing / Graphs / User Rights =================
+   Owner ke account mein sab sub-accounts (Manager, HR, Admin, Waiter, Cook, Procurement) ke
+   bade CTA buttons hain — tap karne par woh section khul jata hai. Main page par is ke ilawa
+   sirf: Summary, Graphs, Profit & Loss, Expense Detail, Purchasing Detail aur User Rights
+   dene ka profile (User Management) hai — counters / admin / HR ke alag hisse hata diye gaye hain. */
+function subCtasHtml(){
+ var defs=[
+  {key:'manager',label:'Manager',cls:'alt',tab:'owner',sub:'Executive dashboard — sales, top items, occupancy',role:'Manager'},
+  {key:'hr',label:'HR',cls:'',tab:'hr',sub:'Employees, profiles, advance, salary aur payroll',role:'HR'},
+  {key:'admin',label:'Admin',cls:'grn',tab:'manage',sub:'Manage — settings, summary aur reports',role:'Owner'},
+  {key:'waiter',label:'Waiter',cls:'',tab:'waiter',sub:'Waiter board — order review, serve, requests',role:'Waiter'},
+  {key:'cook',label:'Cook',cls:'alt',tab:'kitchen',sub:'Kitchen — cook queue, prep aur timers',role:'Cook'},
+  {key:'procurement',label:'Procurement',cls:'grn',tab:'procurement',sub:'Purchasing — requirements aur purchases',role:'Procurement'}
+ ];
+ return '<div class="sub-cta">'+defs.map(function(d){
+   var us=state.users.filter(function(u){return u.role===d.role;});
+   var names=us.map(function(u){return '@'+u.username;}).join(', ');
+   return '<button type="button" class="'+d.cls+'" data-subcta="'+d.key+'" aria-label="'+esc(d.label)+' section kholein"><span class="sc-av">'+esc(d.label.charAt(0))+'</span><span><span class="sc-t">'+esc(d.label)+'</span><span class="sc-s">'+esc(d.sub)+(names?'<br>'+esc(names):'')+'</span></span></button>';
+  }).join('')+'</div>';
+}
+function bindSubCtas(root){
+ if(!root)return;
+ $$('[data-subcta]',root).forEach(function(b){b.addEventListener('click',function(){
+   var k=b.getAttribute('data-subcta');
+   if(k==='manager'){pushHistory();ownerMode='manager';ownerUsersOpen=false;goTab('owner');return;}
+   var tab={hr:'hr',admin:'manage',waiter:'waiter',cook:'kitchen',procurement:'procurement'}[k];
+   if(tab)goTab(tab);
+ });});
+}
+function salesGraphHtml(){
+ var days=[];for(var di=6;di>=0;di--){var dd=new Date();dd.setDate(dd.getDate()-di);days.push(dd);}
+ function sameDay(ts,d){if(!ts)return false;var x=new Date(ts);return x.getFullYear()===d.getFullYear()&&x.getMonth()===d.getMonth()&&x.getDate()===d.getDate();}
+ var daySales=days.map(function(d){return paidOrders().filter(function(o){return sameDay(o.paidAt||o.placedAt,d);}).reduce(function(sm,o){return sm+total(o);},0);});
+ var maxS=Math.max.apply(null,daySales.concat([1]));
+ var h='<div class="exec-bars">'+days.map(function(d,i){var pct=Math.max(3,Math.round(daySales[i]/maxS*100));var isT=i===6;return '<div class="exec-bar'+(isT?' today':'')+'"><span class="bv num">'+(daySales[i]?rs(daySales[i]):'Rs 0')+'</span><div class="bar" style="height:'+pct+'%" title="'+esc(d.toLocaleDateString('en-PK'))+' — Sales '+rs(daySales[i])+'"></div><span class="bl">'+(isT?'Aaj':d.toLocaleDateString('en-PK',{weekday:'short'}))+'</span></div>';}).join('')+'</div>';
+ h+='<p class="note" style="margin:8px 0 0">Har bar = us din ki <b>paid sales</b> · 7 din ki kul paid sales: <b class="num">'+rs(daySales.reduce(function(a,b){return a+b;},0))+'</b></p>';
+ return h;
+}
+function expenseDetailHtml(){
  var T=finTotals();
- var h='<button class="btn orange" data-ownback>← Back — Owner / Manager</button>';
- h+='<h2 class="serif" style="color:var(--navy);margin:10px 0 2px">Owner Dashboard</h2>';
- h+='<p class="note" style="margin:0 0 6px">Saare figures app ke asal data se hain — Revenue = paid orders ka total · Expense = procurement purchases + paid salaries (net) + advances.</p>';
- /* 1 — Graph + Profit & Loss + Sheet */
- h+='<h3 class="serif" style="color:var(--navy);margin:16px 0 8px">Profit &amp; Loss</h3>';
+ var h='<div class="exec-card"><h4>Expense Detail — Kharcha kahan gaya</h4><div class="pl-lines">'
+  +'<div class="exec-top-row"><span>Procurement purchases</span><b class="num">− '+rs(T.pur)+'</b></div>'
+  +'<div class="exec-top-row"><span>Salaries paid (net)</span><b class="num">− '+rs(T.sal)+'</b></div>'
+  +'<div class="exec-top-row"><span>Advances diye gaye</span><b class="num">− '+rs(T.adv)+'</b></div>'
+  +'<div class="exec-top-row"><span>Advances — abhi baqi (staff ke paas)</span><b class="num">'+rs(state.staff.reduce(function(a,sf){return a+empAdvDue(sf);},0))+'</b></div>'
+  +'<div class="exec-top-row"><span><b>Total Expense</b></span><b class="num">'+rs(T.exp)+'</b></div>'
+  +'</div>';
+ var rows=[];
+ state.staff.forEach(function(sf){(sf.salaryPayments||[]).forEach(function(p){rows.push({d:finKeyOf(p.date,p.at),label:'Salary — '+sf.name+' ('+monthLabel(p.month)+')',amt:salPaidAmt(p)});});(sf.advances||[]).forEach(function(a){rows.push({d:finKeyOf(a.date,a.at),label:'Advance — '+sf.name,amt:(+a.amount||0)});});});
+ rows=rows.filter(function(r){return r.d;}).sort(function(a,b){return a.d<b.d?1:-1;}).slice(0,6);
+ if(rows.length)h+='<h4 style="margin:14px 0 4px;color:var(--navy);font-size:13.5px">Recent salary / advance entries</h4>'+rows.map(function(r){return '<div class="exec-top-row"><span>'+esc(r.label)+'<br><span class="note">'+esc(fmtD(r.d))+'</span></span><b class="num">− '+rs(r.amt)+'</b></div>';}).join('');
+ else h+='<p class="note" style="margin:10px 0 0">Abhi koi salary ya advance entry nahi — HR se salary / advance dene par detail yahan aayegi.</p>';
+ h+='</div>';
+ return h;
+}
+function purchasingDetailHtml(){
+ var T=finTotals();
+ var pendReq=state.reqs.filter(function(r){return r.status==='pending';}).length;
+ var boughtReq=state.reqs.filter(function(r){return r.status==='purchased';}).length;
+ var vendSet={};state.purchases.forEach(function(p){if(p.vendor)vendSet[p.vendor]=1;});state.reqs.forEach(function(r){if(r.vendor)vendSet[r.vendor]=1;});
+ var h='<div class="exec-card"><h4>Purchasing Detail — Procurement</h4><div class="pl-lines">'
+  +'<div class="exec-top-row"><span>Total purchases</span><b class="num">'+state.purchases.length+'</b></div>'
+  +'<div class="exec-top-row"><span>Kul purchasing kharcha</span><b class="num">'+rs(T.pur)+'</b></div>'
+  +'<div class="exec-top-row"><span>Pending requirements</span><b class="num">'+pendReq+'</b></div>'
+  +'<div class="exec-top-row"><span>Purchased requirements</span><b class="num">'+boughtReq+'</b></div>'
+  +'<div class="exec-top-row"><span>Vendors</span><b class="num">'+Object.keys(vendSet).length+'</b></div>'
+  +'</div>';
+ var cats={};state.purchases.forEach(function(p){cats[p.category||'Other']=(cats[p.category||'Other']||0)+(+p.amount||0);});
+ var ck=Object.keys(cats).filter(function(c){return cats[c]>0;});
+ if(ck.length)h+='<div class="exec-mix">'+ck.map(function(c){return '<span>'+esc(c)+' · '+rs(cats[c])+'</span>';}).join('')+'</div>';
+ if(state.purchases.length){
+  h+='<h4 style="margin:14px 0 4px;color:var(--navy);font-size:13.5px">Recent purchases</h4><div class="tblwrap"><table class="tbl"><tr><th>Item</th><th>Vendor</th><th>Amount</th><th>Date</th></tr>'
+   +state.purchases.slice().reverse().slice(0,8).map(function(p){return '<tr><td>'+esc(p.item)+'<br><span class="note">'+esc(p.category||'')+'</span></td><td>'+esc(p.vendor||'—')+'</td><td class="num">'+rs(p.amount)+'</td><td>'+esc(fmtD(finKeyOf(p.date,p.at)||p.date))+'</td></tr>';}).join('')+'</table></div>';
+ }else h+='<p class="note" style="margin:10px 0 0">Abhi koi purchase nahi — Procurement se pehli purchase aane par detail yahan dikhegi.</p>';
+ h+='</div>';
+ return h;
+}
+function ownerFinanceHtml(){
+ var T=finTotals();
+ var h='<h3 class="serif" style="color:var(--navy);margin:16px 0 8px">Summary</h3>';
  h+='<div class="stats">'
   +'<div class="stat hero"><div class="k">Total Revenue</div><div class="v num">'+rs(T.rev)+'</div></div>'
   +'<div class="stat"><div class="k">Total Expense</div><div class="v num">'+rs(T.exp)+'</div></div>'
   +'<div class="stat"><div class="k">Net '+(T.net<0?'Loss':'Profit')+'</div><div class="v num" style="color:'+(T.net<0?'var(--red)':'var(--green)')+'">'+rs(T.net)+'</div></div>'
-  +'<div class="stat"><div class="k">Paid Orders</div><div class="v num">'+paidOrders().length+'</div></div></div>';
+  +'<div class="stat"><div class="k">Aaj ki Sale</div><div class="v num">'+rs(todayEarnings())+'</div></div></div>';
+ h+='<h3 class="serif" style="color:var(--navy);margin:18px 0 8px">Graphs</h3>';
  h+='<div class="exec-grid">'
-  +'<div class="exec-card"><h4>Graph — Revenue vs Expense (Pichle 7 Din)</h4>'+plGraphHtml()+'</div>'
-  +'<div class="exec-card"><h4>Profit &amp; Loss — Detail</h4><div class="pl-lines">'
+  +'<div class="exec-card"><h4>Revenue vs Expense — Pichle 7 Din</h4>'+plGraphHtml()+'</div>'
+  +'<div class="exec-card"><h4>Sales — Pichle 7 Din</h4>'+salesGraphHtml()+'</div>'
+  +'</div>';
+ h+='<h3 class="serif" style="color:var(--navy);margin:18px 0 8px">Profit &amp; Loss</h3>';
+ h+='<div class="exec-card"><h4>Profit &amp; Loss — Detail</h4><div class="pl-lines">'
   +'<div class="exec-top-row"><span>Total Revenue (paid orders)</span><b class="num">'+rs(T.rev)+'</b></div>'
   +'<div class="exec-top-row"><span>Procurement purchases</span><b class="num">− '+rs(T.pur)+'</b></div>'
   +'<div class="exec-top-row"><span>Salaries paid (net)</span><b class="num">− '+rs(T.sal)+'</b></div>'
   +'<div class="exec-top-row"><span>Advances diye gaye</span><b class="num">− '+rs(T.adv)+'</b></div>'
   +'<div class="exec-top-row"><span>Total Expense</span><b class="num">'+rs(T.exp)+'</b></div>'
   +'<div class="exec-top-row"><span><b>Net '+(T.net<0?'Loss':'Profit')+'</b></span><b class="num" style="color:'+(T.net<0?'var(--red)':'var(--green)')+'">'+rs(T.net)+'</b></div>'
-  +'</div></div></div>';
+  +'</div></div>';
  h+='<h4 class="serif" style="color:var(--navy);margin:14px 0 8px">Detail Sheet — Date-wise</h4>'+plSheetHtml();
- /* 2 — Sab ke Counters */
- var busy=TABLES.filter(function(t){return activeOrderFor(t.id);}).length;
- var pend=state.orders.filter(function(o){return o.status==='new'||o.status==='preparing'||o.status==='waiter_review';}).length;
- var unpaid=activeOrders(),unpaidAmt=unpaid.reduce(function(s,o){return s+total(o);},0);
- h+='<h3 class="serif" style="color:var(--navy);margin:20px 0 8px">Counters — Sab ka Summary</h3>';
- h+='<div class="stats">'
-  +'<div class="stat"><div class="k">Total Orders</div><div class="v num">'+state.orders.length+'</div></div>'
-  +'<div class="stat"><div class="k">Aaj ki Sale</div><div class="v num">'+rs(todayEarnings())+'</div></div>'
-  +'<div class="stat"><div class="k">Active Tables</div><div class="v num">'+busy+' <small>/ '+TABLES.length+'</small></div></div>'
-  +'<div class="stat"><div class="k">Room Bookings</div><div class="v num">'+state.rooms.length+'</div></div>'
-  +'<div class="stat"><div class="k">Total Employees</div><div class="v num">'+state.staff.length+'</div></div>'
-  +'<div class="stat"><div class="k">Pending Orders</div><div class="v num">'+pend+'</div></div>'
-  +'<div class="stat"><div class="k">Unpaid Bills</div><div class="v num">'+unpaid.length+' <small>· '+rs(unpaidAmt)+'</small></div></div>'
-  +'<div class="stat"><div class="k">Total Users</div><div class="v num">'+state.users.length+'</div></div></div>';
- /* 3 — Admin aur Procurement ki detail */
- var roleCount={};state.users.forEach(function(u){roleCount[u.role]=(roleCount[u.role]||0)+1;});
- var pendReq=state.reqs.filter(function(r){return r.status==='pending';}).length;
- var boughtReq=state.reqs.filter(function(r){return r.status==='purchased';}).length;
- h+='<h3 class="serif" style="color:var(--navy);margin:20px 0 8px">Admin &amp; Procurement — Detail</h3>';
- h+='<div class="exec-grid">'
-  +'<div class="exec-card"><h4>Admin — Users &amp; Accounts</h4><div class="pl-lines">'
-  +'<div class="exec-top-row"><span>Total users / accounts</span><b class="num">'+state.users.length+'</b></div>'
-  +Object.keys(roleCount).sort().map(function(r){return '<div class="exec-top-row"><span>'+esc(r)+' accounts</span><b class="num">'+roleCount[r]+'</b></div>';}).join('')
-  +'<div class="exec-top-row"><span>Guest (customer) accounts</span><b class="num">'+state.accounts.length+'</b></div>'
-  +'</div><p class="note" style="margin:8px 0 0">Accounts banana, edit karna aur rights dena neeche <b>User Area</b> se hota hai.</p></div>'
-  +'<div class="exec-card"><h4>Procurement — Purchasing</h4><div class="pl-lines">'
-  +'<div class="exec-top-row"><span>Total purchases</span><b class="num">'+state.purchases.length+'</b></div>'
-  +'<div class="exec-top-row"><span>Kul kharcha (purchases)</span><b class="num">'+rs(T.pur)+'</b></div>'
-  +'<div class="exec-top-row"><span>Pending requirements</span><b class="num">'+pendReq+'</b></div>'
-  +'<div class="exec-top-row"><span>Purchased requirements</span><b class="num">'+boughtReq+'</b></div>'
-  +'</div></div></div>';
- /* 4 — HR Salary aur Expense ki detail */
- var cm=ymNow(),salThis=0,paidEmp=0;
- state.staff.forEach(function(s){var ps=(s.salaryPayments||[]).filter(function(p){return p.month===cm;});if(ps.length)paidEmp++;ps.forEach(function(p){salThis+=salPaidAmt(p);});});
- var advDueAll=state.staff.reduce(function(a,s){return a+empAdvDue(s);},0);
- var activeN=state.staff.filter(function(s){return s.status==='active';}).length;
- h+='<h3 class="serif" style="color:var(--navy);margin:20px 0 8px">HR — Salary &amp; Expense Detail</h3>';
- h+='<div class="stats">'
-  +'<div class="stat"><div class="k">Salaries Paid — '+esc(monthLabel(cm))+'</div><div class="v num">'+rs(salThis)+'</div></div>'
-  +'<div class="stat"><div class="k">Employees Paid (is mahine)</div><div class="v num">'+paidEmp+' <small>/ '+activeN+'</small></div></div>'
-  +'<div class="stat"><div class="k">Advances — Baqi</div><div class="v num">'+rs(advDueAll)+'</div></div>'
-  +'<div class="stat"><div class="k">Total Expense (sab)</div><div class="v num">'+rs(T.exp)+'</div></div></div>';
- /* 5 — User Area */
- h+='<h3 class="serif" style="color:var(--navy);margin:20px 0 8px">User Area</h3>';
- h+='<button type="button" class="user-area" data-userarea><span class="acct-av">U</span><span style="flex:1;min-width:200px"><b style="font-size:16.5px">User Management — User Create &amp; Edit</b><br><span class="note">'+state.users.length+' accounts · User create karein aur edit karein — har user ko rights sirf Owner yahin se deta hai</span></span><span class="btn '+(ownerUsersOpen?'ghost':'gold')+' sm">'+(ownerUsersOpen?'Band karein':'Kholein →')+'</span></button>';
- if(ownerUsersOpen)h+='<button class="btn orange" data-userarea-back style="margin:2px 0 10px">← Back — Owner Dashboard</button>'+userMgmtHtml();
+ h+='<h3 class="serif" style="color:var(--navy);margin:18px 0 8px">Expense &amp; Purchasing Detail</h3>';
+ h+='<div class="exec-grid">'+expenseDetailHtml()+purchasingDetailHtml()+'</div>';
+ return h;
+}
+function userRightsProfileHtml(){
+ var h='<h3 class="serif" style="color:var(--navy);margin:20px 0 8px">User Rights — Rights Dene ka Profile</h3>';
+ h+='<button type="button" class="user-area" data-userarea><span class="acct-av">U</span><span style="flex:1;min-width:200px"><b style="font-size:16.5px">User Management — User Create &amp; Edit, Rights Dein</b><br><span class="note">'+state.users.length+' accounts · Har user ka profile yahan hai — account banayein, edit karein aur har account ko alag rights sirf Owner yahin se deta hai</span></span><span class="btn '+(ownerUsersOpen?'ghost':'gold')+' sm">'+(ownerUsersOpen?'Band karein':'Kholein →')+'</span></button>';
+ if(ownerUsersOpen)h+='<button class="btn orange" data-userarea-back style="margin:2px 0 10px">← Back — Owner Main Page</button>'+userMgmtHtml();
+ return h;
+}
+function bindUserRightsProfile(root){
+ if(!root)return;
+ var ua=root.querySelector('[data-userarea]');if(ua)ua.addEventListener('click',function(){pushHistory();ownerUsersOpen=!ownerUsersOpen;render();});
+ var ub=root.querySelector('[data-userarea-back]');if(ub)ub.addEventListener('click',function(){navBack();});
+ if(ownerUsersOpen)bindUserMgmt(root);
+}
+function renderOwnerHome(){
+ var view=$('#view-roles');
+ var h=mainBackHtml()+'<h2 class="serif" style="color:var(--navy);margin:6px 0 2px">Owner — Main Page</h2><p class="sub note" style="margin:0 0 6px">Aap <b>'+esc(session.name||session.user)+'</b> (@'+esc(session.user)+') — role <b>Owner</b>. Neeche sab sub-accounts ke CTA buttons hain; main page par sirf summary, profit &amp; loss, expense detail, purchasing detail, graphs aur user rights ka profile hai.</p>';
+ h+='<h3 class="serif" style="color:var(--navy);margin:12px 0 2px">Sub Accounts — CTA</h3><p class="note" style="margin:0">Kisi bhi sub-account ke button par tap karein — us ka section khul jayega.</p>';
+ h+=subCtasHtml();
+ h+=ownerFinanceHtml();
+ h+=userRightsProfileHtml();
+ view.innerHTML=h;bindMainBack(view);bindSubCtas(view);bindUserRightsProfile(view);
+}
+function ownerDashHtml(){
+ var h='<button class="btn orange" data-ownback>← Back — Sub Accounts</button>';
+ h+='<h2 class="serif" style="color:var(--navy);margin:10px 0 2px">Owner Dashboard</h2>';
+ h+='<p class="note" style="margin:0 0 6px">Main page par sirf summary, profit &amp; loss, expense detail, purchasing detail, graphs aur user rights ka profile hai. Saare figures app ke asal data se hain — Revenue = paid orders ka total · Expense = procurement purchases + paid salaries (net) + advances.</p>';
+ h+='<h3 class="serif" style="color:var(--navy);margin:12px 0 2px">Sub Accounts — CTA</h3>'+subCtasHtml();
+ h+=ownerFinanceHtml();
+ h+=userRightsProfileHtml();
  return h;
 }
 function bindOwnerDash(view){
- var back=view.querySelector('[data-ownback]');if(back)back.addEventListener('click',function(){ownerMode='main';ownerUsersOpen=false;render();window.scrollTo(0,0);});
- var ua=view.querySelector('[data-userarea]');if(ua)ua.addEventListener('click',function(){ownerUsersOpen=!ownerUsersOpen;render();});
- var ub=view.querySelector('[data-userarea-back]');if(ub)ub.addEventListener('click',function(){ownerUsersOpen=false;render();window.scrollTo(0,0);});
- if(ownerUsersOpen)bindUserMgmt(view);
+ var back=view.querySelector('[data-ownback]');if(back)back.addEventListener('click',function(){navBack();});
+ bindSubCtas(view);
+ bindUserRightsProfile(view);
 }
 function renderOwner(){
  var view=$('#view-owner');
@@ -2296,15 +2508,16 @@ function renderOwner(){
   mh+='<h2 class="serif" style="color:var(--navy);margin:10px 0 2px">Manager Dashboard</h2><p class="note" style="margin:0">Manager ka executive dashboard — aaj ki kamai, 7 din ki sales, top items, order mix aur occupancy.</p>';
   mh+=execDashboardHtml();
   view.innerHTML=mh;
-  view.querySelector('[data-ownback]').addEventListener('click',function(){ownerMode='main';render();window.scrollTo(0,0);});
+  view.querySelector('[data-ownback]').addEventListener('click',function(){navBack();});
   return;
  }
  if(ownerMode==='owner'){view.innerHTML=ownerDashHtml();bindOwnerDash(view);return;}
  var h=mainBackHtml()+'<h2 class="serif" style="color:var(--navy);margin:6px 0 2px">Owner</h2>';
- h+='<p class="note" style="margin:0 0 6px">Apna dashboard choose karein — <b>Owner</b>: Profit &amp; Loss, counters, Admin, Procurement, HR aur User Area. <b>Manager</b>: executive dashboard.</p>';
- h+='<div class="owner-cta"><button type="button" data-ownmode="owner"><span class="oc-t">Owner</span><span class="oc-s">Profit &amp; Loss graph + detail sheet, sab counters, Admin &amp; Procurement, HR salary / expense aur User Area</span></button><button type="button" class="mgr" data-ownmode="manager"><span class="oc-t">Manager</span><span class="oc-s">Executive Dashboard — 7 din ki sales chart, top items, order mix, unpaid bills aur tables occupancy</span></button></div>';
- view.innerHTML=h;bindMainBack(view);
- $$('[data-ownmode]',view).forEach(function(b){b.addEventListener('click',function(){ownerMode=b.getAttribute('data-ownmode');ownerUsersOpen=false;render();window.scrollTo(0,0);});});
+ h+='<p class="note" style="margin:0 0 6px">Sab sub-accounts ke CTA buttons — kisi par bhi tap karein, us ka section khul jayega. <b>Owner Dashboard</b> mein sirf summary, profit &amp; loss, expense detail, purchasing detail, graphs aur user rights ka profile hai.</p>';
+ h+=subCtasHtml();
+ h+='<button type="button" class="btn gold block" data-ownmode="owner" style="margin-top:12px;min-height:52px;font-size:16px">Owner Dashboard — Summary, Profit &amp; Loss, Graphs →</button>';
+ view.innerHTML=h;bindMainBack(view);bindSubCtas(view);
+ $$('[data-ownmode]',view).forEach(function(b){b.addEventListener('click',function(){pushHistory();ownerMode=b.getAttribute('data-ownmode');ownerUsersOpen=false;render();window.scrollTo(0,0);});});
 }
 /* ================= HR (alag section) =================
    HR ka apna alag section/tab hai — naam sirf "HR", Owner se bilkul alag.
@@ -2437,8 +2650,8 @@ function renderHR(){
  }
 }
 function bindHRSection(view){
- $$('[data-hrmode]',view).forEach(function(b){b.addEventListener('click',function(){hrMode=b.getAttribute('data-hrmode');render();window.scrollTo(0,0);});});
- var hb=view.querySelector('[data-hrback]');if(hb)hb.addEventListener('click',function(){hrMode=null;render();window.scrollTo(0,0);});
+ $$('[data-hrmode]',view).forEach(function(b){b.addEventListener('click',function(){pushHistory();hrMode=b.getAttribute('data-hrmode');render();window.scrollTo(0,0);});});
+ var hb=view.querySelector('[data-hrback]');if(hb)hb.addEventListener('click',function(){navBack();});
  var huAdd=$('#huAdd');if(huAdd)huAdd.addEventListener('click',function(){var un=$('#huUser').value.trim().toLowerCase().replace(/\s+/g,'');if(!un){toast('Username likhein',true);return;}if(state.users.some(function(u){return u.username.toLowerCase()===un.toLowerCase();})){toast('Ye username pehle se maujood hai — doosra choose karein',true);return;}var rl=$('#huRole').value;var pw=$('#huPass').value.trim();if(!pw){toast('Password likhein — har account ka password lazmi hai',true);return;}pwRecord(pw).then(function(rec){state.users.push({username:un,role:rl,pwSalt:rec.pwSalt,pwHash:rec.pwHash,rights:[]});if(rl==='Waiter'&&!waiterByUsername(un))state.waiters.push({name:un,phone:'',username:un});save();submitAlert('HR','User submit ho gaya','@'+un+' ('+rl+') ka account ban gaya — rights Owner apne Owner page ke User Area se dega.',2);toast('User ban gaya — @'+un+' · rights Owner dega');render();}).catch(function(){toast('Password save nahi ho saka — browser WebCrypto support nahi karta',true);});});
  $$('[data-hr-uedit]',view).forEach(function(b){b.addEventListener('click',function(){var un=b.getAttribute('data-hr-uedit');hrUserEdit=(hrUserEdit===un?null:un);hrUserDel=null;render();});});
  $$('[data-hr-ucancel]',view).forEach(function(b){b.addEventListener('click',function(){hrUserEdit=null;render();});});
@@ -2617,7 +2830,7 @@ function renderManage(){
  else h+='<div class="tblwrap"><table class="tbl"><tr><th>Account</th><th>Table / Guest</th><th>Order &amp; Bill</th><th>Hierarchy step</th><th>Review</th><th>Status</th></tr>'+state.accounts.slice().reverse().map(function(a){var ao=a.orderCode?findOrder(a.orderCode):null;var at=getTable(a.tableId);var step='—';if(ao){var ss=flowSteps(ao);step='Complete ✓';for(var i=0;i<ss.length;i++){if(ss[i].state!=='done'){step=ss[i].label+(ss[i].state==='active'?' (chal raha hai)':' (baaki)');break;}}}return '<tr><td><b>'+esc(a.code)+'</b><br><span class="note">'+new Date(a.createdAt).toLocaleString('en-PK')+'</span></td><td>'+esc(at?at.name:a.tableId)+(a.name?'<br>'+esc(a.name):'')+'</td><td>'+(ao?'#'+ao.code+' · <b class="num">'+rs(total(ao))+'</b>':'—')+'</td><td>'+esc(step)+'</td><td>'+(ao&&ao.rating?starsHtml(ao.rating):'—')+'</td><td>'+accountPill(a)+'</td></tr>';}).join('')+'</table></div>';
  h+='</div>';
  h+='<h3 class="serif" style="color:var(--navy);margin-top:20px">Orders — Date-wise Summary</h3><p class="note" style="margin:0 0 10px">Owner / Manager ke liye — har date ke neeche us din ke saare orders (order number, table, customer, items, bill total) aur us din ka total: orders ki tadad, total sales aur tax. Aaj aur pichli saari dates — kal (yesterday) ke orders bhi — is summary mein shamil hain.</p>'+dateSummaryHtml();
- h+='<div class="card" style="margin-top:12px"><h3 style="margin-top:0;color:var(--navy)">Demo data</h3><p class="note">Sab data sirf is browser ke localStorage mein hai. Reset karne se orders, rooms, staff, purchases aur accounts (seeded admin ke siwa) saaf ho jayenge.</p><button class="btn red" id="mgReset">Reset demo data</button></div>';
+ h+='<div class="card" style="margin-top:12px"><h3 style="margin-top:0;color:var(--navy)">Demo data</h3><p class="note">Business data Firebase se sab devices par sync hota hai aur is browser mein cache bhi rehta hai. Reset karne se orders, rooms, staff, purchases aur accounts (seeded admin ke siwa) sab devices par saaf ho jayenge.</p><button class="btn red" id="mgReset">Reset demo data</button></div>';
  $('#view-manage').innerHTML=h;
  $('#mgReset').addEventListener('click',function(){localStorage.removeItem(LS_KEY);state=defaultState();save();toast('Demo data reset ho gaya');render();});
  function bindAcRightToggles(){$$('#acRightsWrap [data-acright]').forEach(function(cb){cb.addEventListener('change',function(){var lbl=cb.closest('.right-item');if(lbl)lbl.classList.toggle('on',cb.checked);});});}
@@ -3024,6 +3237,7 @@ save();
 applyLang();
 renderCarousel();
 renderTableGrid();
+fbInit();
 var params=new URLSearchParams(location.search);
 var qt=params.get('table');
 if(qt&&getTable(qt)){openGuest(qt);}
